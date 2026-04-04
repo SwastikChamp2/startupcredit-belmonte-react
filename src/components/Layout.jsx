@@ -19,6 +19,7 @@ import useTextAnimation from '../hooks/useTextAnimation'
 import useImageReveal from '../hooks/useImageReveal'
 import useFadeWrapper from '../hooks/useFadeWrapper'
 import useCustomCursor from '../hooks/useCustomCursor'
+import useScrollReset from '../hooks/useScrollReset'
 
 function Layout() {
   useDataBackground()

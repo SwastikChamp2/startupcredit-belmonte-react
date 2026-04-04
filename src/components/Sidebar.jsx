@@ -52,6 +52,8 @@ function Sidebar() {
     <ul className="side-menu-social">
       <li className="facebook"><a href="#"><i className="fab fa-facebook-f" /></a></li>
       <li className="instagram"><a href="#"><i className="fab fa-instagram" /></a></li>
+      <li className="behance"><a href="#"><i className="fab fa-behance" /></a></li>
+      <li className="g-plus"><a href="#"><i className="fab fa-google-plus" /></a></li>
     </ul>
   </div>
 </div>

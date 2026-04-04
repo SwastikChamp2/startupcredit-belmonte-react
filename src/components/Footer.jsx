@@ -1,8 +1,100 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 
 function Footer() {
+  const { pathname } = useLocation()
+  const isHome = pathname === '/'
+
+  if (!isHome) {
+    // Sub-page footer (footer-2)
+    return (
+      <footer className="footer-section footer-2 overflow-hidden">
+        <div className="shapes">
+          <div className="shape shape-1"><img src="assets/img/shapes/footer-shape-1.png" alt="footer" /></div>
+          <div className="shape shape-2"><img src="assets/img/shapes/footer-shape-2.png" alt="footer" /></div>
+          <div className="shape shape-3"><img src="assets/img/shapes/footer-shape-3.png" alt="footer" /></div>
+        </div>
+        <div className="container-2">
+          <div className="row footer-wrap">
+            <div className="col-lg-3 col-md-6">
+              <div className="footer-widget">
+                <div className="widget-header">
+                  <div className="footer-logo">
+                    <Link to="/"><img src="assets/img/logo/logo-5.png" alt="img" /></Link>
+                  </div>
+                </div>
+                <p>1234, Restaurant St, South City <br />New York 0124</p>
+                <ul className="footer-social">
+                  <li><a href="#"><i className="fab fa-facebook-f" /></a></li>
+                  <li><a href="#"><i className="fab fa-instagram" /></a></li>
+                </ul>
+              </div>
+            </div>
+            <div className="col-lg-3 col-md-6">
+              <div className="footer-widget widget-space">
+                <div className="widget-header">
+                  <h3 className="widget-title">Quick Links</h3>
+                </div>
+                <ul className="footer-list">
+                  <li><a href="#">About Us</a></li>
+                  <li><a href="#">Portfolio</a></li>
+                  <li><a href="#">Testimonials</a></li>
+                  <li><a href="#">Blog</a></li>
+                  <li><a href="#">Contact Us</a></li>
+                </ul>
+              </div>
+            </div>
+            <div className="col-lg-2 col-md-6">
+              <div className="footer-widget">
+                <div className="widget-header">
+                  <h3 className="widget-title">Information</h3>
+                </div>
+                <ul className="footer-list">
+                  <li><a href="#">Request Service</a></li>
+                  <li><a href="#">Our Work</a></li>
+                  <li><a href="#">What We Do</a></li>
+                  <li><a href="#">Our Process</a></li>
+                  <li><a href="#">Reviews</a></li>
+                </ul>
+              </div>
+            </div>
+            <div className="col-lg-4 col-md-6">
+              <div className="footer-widget widget-space">
+                <div className="widget-header">
+                  <h3 className="widget-title">Our Newsletter</h3>
+                </div>
+                <p>Sign up to Private's weekly newsletter to get the latest updates.</p>
+                <div className="footer-form form-2 mb-20">
+                  <form action="#" className="rr-subscribe-form">
+                    <input className="form-control" type="email" name="email" placeholder="Email address" />
+                    <input type="hidden" name="action" defaultValue="mailchimpsubscribe" />
+                    <button className="submit">Subscribe</button>
+                  </form>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="copyright-area area-2">
+          <div className="container">
+            <div className="row copyright-content">
+              <div className="col-md-6">
+                <p>&copy; 2024 Bizan. All Rights Reserved.</p>
+              </div>
+              <div className="col-md-6">
+                <ul className="copy-list">
+                  <li><a href="#">Terms &amp; Conditions</a></li>
+                  <li><a href="#">Privacy Policy</a></li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </footer>
+    )
+  }
+
+  // Home page footer
   return (
-    // TODO: Paste converted JSX from the <footer> section of index.html
     <footer className="footer-section pt-120 overflow-hidden">
   <div className="footer-shape">
     <img src="assets/img/shapes/footer-shape.png" alt="shape" />
@@ -82,7 +174,7 @@ function Footer() {
     <div className="container">
       <div className="row copyright-content">
         <div className="col-md-6">
-          <p>© 2024 Bizan. All Rights Reserved.</p>
+          <p>&copy; 2024 Bizan. All Rights Reserved.</p>
         </div>
         <div className="col-md-6">
           <ul className="copy-list">

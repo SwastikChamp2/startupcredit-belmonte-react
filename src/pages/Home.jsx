@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Swiper, SwiperSlide } from 'swiper/react'
-import { Navigation, Pagination, Autoplay } from 'swiper/modules'
+import { Navigation, Autoplay } from 'swiper/modules'
 
 function Home() {
   const [requestMsg, setRequestMsg] = useState('')
@@ -24,7 +24,6 @@ function Home() {
     <div className="shapes">
       <div className="shape shape-1"><img src="assets/img/shapes/hero-shape-1.png" alt="shape" /></div>
       <div className="shape shape-2"><img src="assets/img/shapes/hero-shape-2.png" alt="shape" /></div>
-      <div className="shape shape-3"><img src="assets/img/shapes/hero-shape-3.png" alt="shape" /></div>
       <div className="shape shape-4"><img src="assets/img/shapes/hero-shape-4.png" alt="shape" /></div>
       <div className="round-shape" />
     </div>
@@ -243,7 +242,7 @@ function Home() {
                     acter elementum mauris porttitor mus commodo tortor.</p>
                   <div className="tab-progress">
                     <div className="progress">
-                      <div className="progress-bar" role="progressbar" style={{width: '90%'}}>
+                      <div className="progress-bar wow slideInLeft" data-wow-delay="0ms" data-wow-duration="2000ms" role="progressbar" style={{width: '90%', visibility: 'visible', animationDuration: '2000ms', animationDelay: '0ms', animationName: 'slideInLeft'}}>
                         <span>90%</span>
                       </div>
                     </div>
@@ -259,7 +258,7 @@ function Home() {
                     acter elementum mauris porttitor mus commodo tortor.</p>
                   <div className="tab-progress">
                     <div className="progress">
-                      <div className="progress-bar" role="progressbar" style={{width: '80%'}}>
+                      <div className="progress-bar wow slideInLeft" data-wow-delay="0ms" data-wow-duration="2000ms" role="progressbar" style={{width: '80%', visibility: 'visible', animationDuration: '2000ms', animationDelay: '0ms', animationName: 'slideInLeft'}}>
                         <span>80%</span>
                       </div>
                     </div>
@@ -275,7 +274,7 @@ function Home() {
                     acter elementum mauris porttitor mus commodo tortor.</p>
                   <div className="tab-progress">
                     <div className="progress">
-                      <div className="progress-bar" role="progressbar" style={{width: '85%'}}>
+                      <div className="progress-bar wow slideInLeft" data-wow-delay="0ms" data-wow-duration="2000ms" role="progressbar" style={{width: '85%', visibility: 'visible', animationDuration: '2000ms', animationDelay: '0ms', animationName: 'slideInLeft'}}>
                         <span>85%</span>
                       </div>
                     </div>
@@ -357,7 +356,7 @@ function Home() {
       </div>
       <Swiper
         className="project-carousel"
-        modules={[Navigation, Pagination, Autoplay]}
+        modules={[Navigation, Autoplay]}
         slidesPerView={2}
         spaceBetween={30}
         loop={true}
@@ -368,7 +367,6 @@ function Home() {
           nextEl: '.project-section .swiper-prev',
           prevEl: '.project-section .swiper-next',
         }}
-        pagination={{ el: '.project-section .swiper-pagination', clickable: true }}
         breakpoints={{
           320: { slidesPerView: 1, spaceBetween: 30 },
           767: { slidesPerView: 2, spaceBetween: 30 },
@@ -408,7 +406,6 @@ function Home() {
           </div>
         </SwiperSlide>
       </Swiper>
-      <div className="swiper-pagination" />
     </div>
   </section>
   {/* ./ project-section */}
@@ -421,7 +418,7 @@ function Home() {
       </div>
       <Swiper
         className="testi-carousel"
-        modules={[Navigation, Pagination, Autoplay]}
+        modules={[Navigation, Autoplay]}
         slidesPerView={2}
         spaceBetween={30}
         loop={true}
@@ -432,7 +429,6 @@ function Home() {
           nextEl: '.testi-section .swiper-prev',
           prevEl: '.testi-section .swiper-next',
         }}
-        pagination={{ el: '.testimonial-section .swiper-pagination', clickable: true }}
         breakpoints={{
           320: { slidesPerView: 1, spaceBetween: 30 },
           767: { slidesPerView: 1, spaceBetween: 30 },
@@ -459,7 +455,6 @@ function Home() {
           </SwiperSlide>
         ))}
       </Swiper>
-      <div className="swiper-pagination" />
     </div>
   </section>
   {/* ./ testimonial-section */}

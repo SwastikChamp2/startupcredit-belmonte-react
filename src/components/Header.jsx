@@ -22,15 +22,24 @@ function Header() {
         <Link to="/">Home</Link>
         <ul>
           <li><Link to="/">Corporate</Link></li>
+          <li><Link to="/">Insurance</Link></li>
+          <li><Link to="/">Finance</Link></li>
+          <li><Link to="/">Finance 02</Link></li>
+          <li><Link to="/">business-Consulting</Link></li>
+          <li><Link to="/">Finance 03</Link></li>
         </ul>
       </li>
       <li className="menu-item-has-children">
         <a href="#">Pages</a>
         <ul>
           <li><Link to="/about">About</Link></li>
-          <li><Link to="/service">Service</Link></li>
-          <li><Link to="/service-details">Service Details</Link></li>
-          <li><Link to="/contact">Contact</Link></li>
+          <li><Link to="/">Team</Link></li>
+          <li><Link to="/">Team Details</Link></li>
+          <li><Link to="/">Portfolio</Link></li>
+          <li><Link to="/">Portfolio Details</Link></li>
+          <li><Link to="/">Pricing Plans</Link></li>
+          <li><Link to="/">Faq</Link></li>
+          <li><Link to="/">404 Error</Link></li>
         </ul>
       </li>
       <li className="menu-item-has-children">
@@ -38,6 +47,14 @@ function Header() {
         <ul>
           <li><Link to="/service">Service</Link></li>
           <li><Link to="/service-details">Service Details</Link></li>
+        </ul>
+      </li>
+      <li className="menu-item-has-children">
+        <a href="#">Blog</a>
+        <ul>
+          <li><Link to="/">Blog Grid</Link></li>
+          <li><Link to="/">Blog list</Link></li>
+          <li><Link to="/">Blog Details</Link></li>
         </ul>
       </li>
       <li><Link to="/contact">Contact</Link></li>
