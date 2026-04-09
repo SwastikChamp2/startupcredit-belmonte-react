@@ -1,68 +1,96 @@
 import { Link, useLocation } from 'react-router-dom'
 
+const servicesGridMenu = (
+  <ul className="services-grid-menu">
+    <li className="grid-column">
+      <h4 className="grid-title">Government Schemes</h4>
+      <ul>
+        <li><Link to="/service-details?scheme=pmegp-scheme">PMEGP Scheme</Link></li>
+        <li><Link to="/service-details?scheme=cgtmse-scheme">CGTMSE Scheme</Link></li>
+        <li><Link to="/service-details?scheme=startup-india">Startup India</Link></li>
+        <li><Link to="/service-details?scheme=sisf-scheme">SISF Scheme</Link></li>
+      </ul>
+    </li>
+    <li className="grid-column">
+      <h4 className="grid-title">Startup Funding</h4>
+      <ul>
+        <li><Link to="/service-details?scheme=angel-investment">Angel Investment</Link></li>
+        <li><Link to="/service-details?scheme=venture-capital">Venture Capital</Link></li>
+        <li><Link to="/service-details?scheme=seed-to-scale">Seed-to-Scale</Link></li>
+        <li><Link to="/service-details?scheme=working-capital">Working Capital</Link></li>
+      </ul>
+    </li>
+    <li className="grid-column">
+      <h4 className="grid-title">Financing Options</h4>
+      <ul>
+        <li><Link to="/service-details?scheme=term-loans">Term Loans</Link></li>
+        <li><Link to="/service-details?scheme=invoice-financing">Invoice Financing</Link></li>
+        <li><Link to="/service-details?scheme=equipment-financing">Equipment Financing</Link></li>
+        <li><Link to="/service-details?scheme=export-financing">Export Financing</Link></li>
+      </ul>
+    </li>
+    <li className="grid-column">
+      <h4 className="grid-title">Special Categories</h4>
+      <ul>
+        <li><Link to="/service-details?scheme=women-entrepreneurs">Women Entrepreneurs</Link></li>
+        <li><Link to="/service-details?scheme=green-business">Green Business</Link></li>
+        <li><Link to="/service-details?scheme=rural-industries">Rural Industries</Link></li>
+      </ul>
+    </li>
+  </ul>
+)
+
+const servicesFlatList = (
+  <ul>
+    <li><Link to="/service-details?scheme=pmegp-scheme">PMEGP Scheme</Link></li>
+    <li><Link to="/service-details?scheme=cgtmse-scheme">CGTMSE Scheme</Link></li>
+    <li><Link to="/service-details?scheme=startup-india">Startup India</Link></li>
+    <li><Link to="/service-details?scheme=sisf-scheme">SISF Scheme</Link></li>
+    <li><Link to="/service-details?scheme=angel-investment">Angel Investment</Link></li>
+    <li><Link to="/service-details?scheme=venture-capital">Venture Capital</Link></li>
+    <li><Link to="/service-details?scheme=seed-to-scale">Seed-to-Scale</Link></li>
+    <li><Link to="/service-details?scheme=working-capital">Working Capital</Link></li>
+    <li><Link to="/service-details?scheme=term-loans">Term Loans</Link></li>
+    <li><Link to="/service-details?scheme=invoice-financing">Invoice Financing</Link></li>
+    <li><Link to="/service-details?scheme=equipment-financing">Equipment Financing</Link></li>
+    <li><Link to="/service-details?scheme=export-financing">Export Financing</Link></li>
+    <li><Link to="/service-details?scheme=women-entrepreneurs">Women Entrepreneurs</Link></li>
+    <li><Link to="/service-details?scheme=green-business">Green Business</Link></li>
+    <li><Link to="/service-details?scheme=rural-industries">Rural Industries</Link></li>
+  </ul>
+)
+
 function Header() {
   const { pathname } = useLocation()
-  const isHome = pathname === '/'
+  const isAbout = pathname === '/about'
+
+  // Grid dropdown on home, about, contact; flat list on service, service-details, error, etc.
+  const useGridMenu = pathname === '/' || pathname === '/about' || pathname === '/contact'
+  const servicesDropdown = useGridMenu ? servicesGridMenu : servicesFlatList
 
   const toggleSidebar = (e) => {
     e.preventDefault()
     document.body.classList.toggle('open-sidebar')
   }
 
-  const toggleSearch = (e) => {
-    e.stopPropagation()
-    const searchBox = document.getElementById('popup-search-box')
-    searchBox.classList.toggle('toggled')
-    document.getElementById('popup-search')?.focus()
-  }
-
   const navMenu = (
     <ul>
-      <li className="menu-item-has-children active">
-        <Link to="/">Home</Link>
-        <ul>
-          <li><Link to="/">Corporate</Link></li>
-          <li><Link to="/">Insurance</Link></li>
-          <li><Link to="/">Finance</Link></li>
-          <li><Link to="/">Finance 02</Link></li>
-          <li><Link to="/">business-Consulting</Link></li>
-          <li><Link to="/">Finance 03</Link></li>
-        </ul>
+      <li className={pathname === '/' ? 'active' : ''}>
+        <Link to="/">HOME</Link>
       </li>
-      <li className="menu-item-has-children">
-        <a href="#">Pages</a>
-        <ul>
-          <li><Link to="/about">About</Link></li>
-          <li><Link to="/">Team</Link></li>
-          <li><Link to="/">Team Details</Link></li>
-          <li><Link to="/">Portfolio</Link></li>
-          <li><Link to="/">Portfolio Details</Link></li>
-          <li><Link to="/">Pricing Plans</Link></li>
-          <li><Link to="/">Faq</Link></li>
-          <li><Link to="/">404 Error</Link></li>
-        </ul>
+      <li className={pathname === '/about' ? 'active' : ''}><Link to="/about">ABOUT</Link></li>
+      <li className={`menu-item-has-children${pathname === '/service' || pathname === '/service-details' ? ' active' : ''}`}>
+        <Link to="/service">SERVICES</Link>
+        {servicesDropdown}
       </li>
-      <li className="menu-item-has-children">
-        <Link to="/service">Services</Link>
-        <ul>
-          <li><Link to="/service">Service</Link></li>
-          <li><Link to="/service-details">Service Details</Link></li>
-        </ul>
-      </li>
-      <li className="menu-item-has-children">
-        <a href="#">Blog</a>
-        <ul>
-          <li><Link to="/">Blog Grid</Link></li>
-          <li><Link to="/">Blog list</Link></li>
-          <li><Link to="/">Blog Details</Link></li>
-        </ul>
-      </li>
-      <li><Link to="/contact">Contact</Link></li>
+      <li className={pathname === '/select-project' ? 'active' : ''}><Link to="/select-project">SELECT PROJECT</Link></li>
+      <li className={pathname === '/business-associate' ? 'active' : ''}><Link to="/business-associate">BUSINESS ASSOCIATE</Link></li>
+      <li className={pathname === '/contact' ? 'active' : ''}><Link to="/contact">CONTACT</Link></li>
     </ul>
   )
 
-  // Sub-pages: header-3 header-4 variant (logo + nav + View All Services + hamburger)
-  if (!isHome) {
+  // About page: header-3 header-4 variant
+  if (isAbout) {
     return (
       <header className="header header-3 header-4 sticky-active">
         <div className="primary-header">
@@ -70,7 +98,7 @@ function Header() {
             <div className="primary-header-inner">
               <div className="header-logo">
                 <Link to="/">
-                  <img src="assets/img/logo/logo-2.png" alt="logo" />
+                  <img src="assets/img/logo/logo-2.png" alt="Startup Credit logo" />
                 </Link>
               </div>
               <div className="inner-left">
@@ -82,7 +110,7 @@ function Header() {
               </div>
               <div className="header-right-wrap">
                 <div className="header-right">
-                  <Link to="/service" className="bz-primary-btn">View All Services</Link>
+                  <Link to="/service" className="bz-primary-btn">VIEW ALL SERVICES</Link>
                   <div className="sidebar-icon-2">
                     <button className="sidebar-trigger open" onClick={toggleSidebar}>
                       <span />
@@ -99,76 +127,78 @@ function Header() {
     )
   }
 
-  // Home page: full header with middle-header + primary-header
+  // Header button text varies by page
+  const headerBtnText = pathname === '/service' ? 'Get Funded Now'
+    : pathname === '/service-details' ? 'Get Funding'
+    : 'CONTACT US'
+
+  // All other pages: full header with middle-header + primary-header
   return (
     <header className="header sticky-active">
-  <div className="middle-header">
-    <div className="container">
-      <div className="middle-header-inner">
-        <div className="header-logo">
-          <div className="shape" />
-          <Link to="/">
-            <img src="assets/img/logo/logo-1.png" alt="logo" />
-          </Link>
-        </div>
-        <div className="header-items-wrap">
-          <div className="header-item">
-            <div className="icon"><i className="fa-sharp fa-solid fa-phone" /></div>
-            <div className="content">
-              <span>Call Us 24/7</span>
-              <a href="tel:+26921562148">(+269) 2156 2148</a>
+      <div className="middle-header">
+        <div className="container">
+          <div className="middle-header-inner">
+            <div className="header-logo">
+              <div className="shape" />
+              <Link to="/">
+                <img src="assets/img/logo/logo-1.png" alt="Startup Credit Logo" />
+              </Link>
             </div>
-          </div>
-          <div className="header-item">
-            <div className="icon"><i className="fa-sharp fa-solid fa-envelope" /></div>
-            <div className="content">
-              <span>Mail For Support</span>
-              <a href="mailto:info@bizan.com">info@bizan.com</a>
-            </div>
-          </div>
-          <div className="header-item">
-            <div className="icon"><i className="fa-sharp fa-solid fa-location-dot" /></div>
-            <div className="content">
-              <span>Office Address</span>
-              <h4 className="address mb-0">259 HGS, Hotland, USA</h4>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-  <div className="primary-header">
-    <div className="container">
-      <div className="primary-header-inner">
-        <div className="header-logo d-lg-none">
-          <Link to="/">
-            <img src="assets/img/logo/logo-2.png" alt="logo" />
-          </Link>
-        </div>
-        <div className="header-menu-wrap">
-          <div className="mobile-menu-items">
-            {navMenu}
-          </div>
-        </div>
-        <div className="header-right-wrap">
-          <div className="header-right">
-            <Link to="/contact" className="header-btn">Contact Us</Link>
-            <div className="search-icon dl-search-icon" onClick={toggleSearch}>
-              <i className="fas fa-magnifying-glass" />
-            </div>
-            <div className="sidebar-icon">
-              <button className="sidebar-trigger open" onClick={toggleSidebar}>
-                <span />
-                <span />
-                <span />
-              </button>
+            <div className="header-items-wrap">
+              <div className="header-item">
+                <div className="icon"><i className="fa-sharp fa-solid fa-phone" /></div>
+                <div className="content">
+                  <span>CALL US</span>
+                  <a href="tel:+919850344666">9850344666</a>
+                </div>
+              </div>
+              <div className="header-item">
+                <div className="icon"><i className="fa-sharp fa-solid fa-envelope" /></div>
+                <div className="content">
+                  <span>MAIL FOR SUPPORT</span>
+                  <a href="mailto:info@startupcredit.in">info@startupcredit.in</a>
+                </div>
+              </div>
+              <div className="header-item">
+                <div className="icon"><i className="fa-sharp fa-solid fa-location-dot" /></div>
+                <div className="content">
+                  <span>OFFICE ADDRESS</span>
+                  <a href="https://maps.app.goo.gl/8EStxiiwF8tQ1tvJ6" target="_blank" rel="noreferrer" className="address mb-0 text-decoration-none">Kharghar, Navi Mumbai, India</a>
+                </div>
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
-  </div>
-</header>
+      <div className="primary-header">
+        <div className="container">
+          <div className="primary-header-inner">
+            <div className="header-logo d-lg-none">
+              <Link to="/">
+                <img src="assets/img/logo/logo-2.png" alt="Startup Credit Logo" />
+              </Link>
+            </div>
+            <div className="header-menu-wrap">
+              <div className="mobile-menu-items">
+                {navMenu}
+              </div>
+            </div>
+            <div className="header-right-wrap">
+              <div className="header-right">
+                <Link to="/contact" className="header-btn">{headerBtnText}</Link>
+                <div className="sidebar-icon">
+                  <button className="sidebar-trigger open" onClick={toggleSidebar}>
+                    <span />
+                    <span />
+                    <span />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
   )
 }
 

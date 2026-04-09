@@ -6,17 +6,27 @@ export default function useStickyHeader() {
 
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 992px)')
+    let scrollHandler = null
 
-    // Small delay to let the header re-render after route change
+    // Delay to let the header DOM re-render after route change
     const timer = setTimeout(() => {
       const header = document.querySelector('.header.sticky-active')
       const stickyHeader = document.querySelector('.primary-header')
       if (!header || !stickyHeader) return
 
-      // Reset height first
+      // Reset any previous fixed height and scroll state
       header.style.height = ''
+      stickyHeader.classList.remove('fixed')
 
-      function handleScroll() {
+      // Force reflow to get accurate height
+      const headerHeight = header.offsetHeight
+
+      // Set header height to prevent layout shift when primary-header becomes fixed
+      if (mq.matches) {
+        header.style.height = headerHeight + 'px'
+      }
+
+      scrollHandler = () => {
         if (!mq.matches) return
         if (window.scrollY >= 110) {
           stickyHeader.classList.add('fixed')
@@ -25,26 +35,19 @@ export default function useStickyHeader() {
         }
       }
 
-      // Set header height to prevent layout shift
-      if (mq.matches) {
-        header.style.height = header.offsetHeight + 'px'
-      }
-
-      // Reset scroll class on route change
-      stickyHeader.classList.remove('fixed')
-
-      window.addEventListener('scroll', handleScroll, { passive: true })
-
-      // Store cleanup ref
-      timer._cleanup = () => {
-        window.removeEventListener('scroll', handleScroll)
-        if (header) header.style.height = ''
-      }
-    }, 50)
+      window.addEventListener('scroll', scrollHandler, { passive: true })
+    }, 100)
 
     return () => {
       clearTimeout(timer)
-      if (timer._cleanup) timer._cleanup()
+      if (scrollHandler) {
+        window.removeEventListener('scroll', scrollHandler)
+      }
+      // Reset header height on cleanup so next route starts fresh
+      const header = document.querySelector('.header.sticky-active')
+      const stickyHeader = document.querySelector('.primary-header')
+      if (header) header.style.height = ''
+      if (stickyHeader) stickyHeader.classList.remove('fixed')
     }
   }, [pathname])
 }

@@ -1,9 +1,9 @@
 /*-----------------------------------------------------------------------------------
 
-    Template Name: Bizan - Business & Finance HTML5 Template
+    Template Name: Startup Credit
     Author: RRDevs
     Support: 
-    Description: Bizan - Business & Finance HTML5 Template
+    Description: Startup Credit
     Version: 1.0
 
 -----------------------------------------------------------------------------------
@@ -6130,6 +6130,18 @@ START: Header CSS
   color: var(--bz-color-common-white);
 }
 
+/* Service Card Link */
+.service-card-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.service-card-link:hover {
+  text-decoration: none;
+}
+
 /* !END: Service CSS */
 /**----------------------------------------
     START: Content CSS
@@ -9383,7 +9395,7 @@ START: Contact CSS
 }
 
 .faq-accordion .accordion-item .accordion-button:not(.collapsed):after {
-  content: "\f068";
+  content: "✖";
   -webkit-transform: rotate(0);
   transform: rotate(0);
 }
@@ -19337,4 +19349,72 @@ START: Footer CSS
   font-weight: 400;
   color: #1E6EE7;
   font-family: var(--bz-ff-heading);
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+/* Services Grid Menu Styles */
+.services-grid-menu {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 30px;
+  padding: 25px !important;
+  min-width: 300px;
+  list-style: none !important;
+  cursor: pointer;
+}
+
+.services-grid-menu .grid-column {
+  list-style: none;
+}
+
+.services-grid-menu .grid-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #191F29;
+  text-transform: uppercase;
+  margin-bottom: 15px;
+  letter-spacing: 0.5px;
+}
+
+.services-grid-menu .grid-column ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.services-grid-menu .grid-column ul li {
+  list-style: none;
+  margin-bottom: 12px;
+}
+
+.services-grid-menu .grid-column ul li a {
+  color: #74787C;
+  font-size: 14px;
+  font-weight: 400;
+  text-decoration: none;
+  transition: all 0.3s ease;
+}
+
+.services-grid-menu .grid-column ul li a:hover {
+  color: #1E6EE7;
+  padding-left: 5px;
+}
+
+@media (max-width: 1200px) {
+  .services-grid-menu {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 25px;
+    min-width: auto;
+  }
+}
+
+@media (max-width: 768px) {
+  .services-grid-menu {
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 20px !important;
+  }
 }
