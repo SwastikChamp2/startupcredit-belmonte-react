@@ -1,10 +1,10 @@
 export const servicesData = [
   {
-    title: "Prime Ministers Employment Generation Programme",
-    description: "PMEGP: A credit-linked subsidy program for new enterprises offering up to 35% subsidy to boost employment.",
-    image: "assets/img/service/service-img-1.png",
-    alt: "Prime Minister's Employment Generation Programme",
-    scheme: "pmegp-scheme"
+    title: "National Agricultural Infra Financing",
+    description: "AIF-backed financing for post-harvest infrastructure, community farming assets, warehouses, cold chains, and agri-logistics projects.",
+    image: "assets/img/project/project1.jpg",
+    alt: "National Agricultural Infrastructure Financing",
+    scheme: "national-agricultural-infra-financing"
   },
   {
     title: "Funding through CGTMSE (up to 10Cr)",
@@ -103,5 +103,12 @@ export const servicesData = [
     image: "assets/img/service/service-img-15.png",
     alt: "Rural Industries",
     scheme: "rural-industries"
+  },
+  {
+    title: "Prime Ministers Employment Generation Programme",
+    description: "PMEGP: A credit-linked subsidy program for new enterprises offering up to 35% subsidy to boost employment.",
+    image: "assets/img/service/service-img-1.png",
+    alt: "Prime Minister's Employment Generation Programme",
+    scheme: "pmegp-scheme"
   }
 ]

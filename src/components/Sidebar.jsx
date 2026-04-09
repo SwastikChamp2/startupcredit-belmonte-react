@@ -21,6 +21,25 @@ function Sidebar() {
           <Link to="/"><img src="assets/img/logo/logo-2.png" alt="Startup Credit Logo" /></Link>
         </div>
         <div className="side-menu-wrap" />
+        <div className="side-menu-contact">
+          <div className="side-menu-header">
+            <h3>Quick Links</h3>
+          </div>
+          <ul className="side-menu-list">
+            <li>
+              <i className="fas fa-diagram-project" />
+              <Link to="/select-project" onClick={closeSidebar}>Select Project</Link>
+            </li>
+            <li>
+              <i className="fas fa-handshake-angle" />
+              <Link to="/business-associate" onClick={closeSidebar}>Business Associate</Link>
+            </li>
+            <li>
+              <i className="fas fa-chart-line" />
+              <Link to="/become-investor" onClick={closeSidebar}>Become Investor</Link>
+            </li>
+          </ul>
+        </div>
         <div className="side-menu-about">
           <div className="side-menu-header">
             <h3>About Us</h3>

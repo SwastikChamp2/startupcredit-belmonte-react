@@ -141,10 +141,9 @@ function ServiceDetails() {
                     <div className="shape"><img src="assets/img/shapes/service-cta-shape.png" alt="shape" /></div>
                   </div>
                   <div className="content text-center">
-                    <a className="number" href="tel:+919850344666">+91-9850344666</a>
-                    <span>Mon-Fri: 7:00 am-9:00 pm</span>
-                    <span>24/7 Service Available</span>
-                    <a href="tel:+919850344666" className="bz-primary-btn">CALL US NOW</a>
+                    <a className="number" href="/select-project">Get Your Project Funded</a>
+                    <span>Tell us about your plan and we will help you choose the right funding path.</span>
+                    <Link to="/select-project" className="bz-primary-btn">SELECT PROJECT</Link>
                   </div>
                 </div>
               </div>

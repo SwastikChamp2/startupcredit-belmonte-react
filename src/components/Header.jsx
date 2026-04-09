@@ -5,6 +5,8 @@ const servicesGridMenu = (
     <li className="grid-column">
       <h4 className="grid-title">Government Schemes</h4>
       <ul>
+        <li><Link to="/service-details?scheme=national-agricultural-infra-financing">National Agricultural Infra Financing</Link></li>
+        <li><Link to="/government-schemes">Government Schemes Directory</Link></li>
         <li><Link to="/service-details?scheme=pmegp-scheme">PMEGP Scheme</Link></li>
         <li><Link to="/service-details?scheme=cgtmse-scheme">CGTMSE Scheme</Link></li>
         <li><Link to="/service-details?scheme=startup-india">Startup India</Link></li>
@@ -42,6 +44,8 @@ const servicesGridMenu = (
 
 const servicesFlatList = (
   <ul>
+    <li><Link to="/service-details?scheme=national-agricultural-infra-financing">National Agricultural Infra Financing</Link></li>
+    <li><Link to="/government-schemes">Government Schemes Directory</Link></li>
     <li><Link to="/service-details?scheme=pmegp-scheme">PMEGP Scheme</Link></li>
     <li><Link to="/service-details?scheme=cgtmse-scheme">CGTMSE Scheme</Link></li>
     <li><Link to="/service-details?scheme=startup-india">Startup India</Link></li>
@@ -63,6 +67,7 @@ const servicesFlatList = (
 function Header() {
   const { pathname } = useLocation()
   const isAbout = pathname === '/about'
+  const isGovernmentSchemes = pathname === '/government-schemes' || pathname.startsWith('/government-schemes/')
 
   // Grid dropdown on home, about, contact; flat list on service, service-details, error, etc.
   const useGridMenu = pathname === '/' || pathname === '/about' || pathname === '/contact'
@@ -79,12 +84,13 @@ function Header() {
         <Link to="/">HOME</Link>
       </li>
       <li className={pathname === '/about' ? 'active' : ''}><Link to="/about">ABOUT</Link></li>
-      <li className={`menu-item-has-children${pathname === '/service' || pathname === '/service-details' ? ' active' : ''}`}>
+      <li className={`menu-item-has-children${pathname === '/service' || pathname === '/service-details' || isGovernmentSchemes ? ' active' : ''}`}>
         <Link to="/service">SERVICES</Link>
         {servicesDropdown}
       </li>
       <li className={pathname === '/select-project' ? 'active' : ''}><Link to="/select-project">SELECT PROJECT</Link></li>
       <li className={pathname === '/business-associate' ? 'active' : ''}><Link to="/business-associate">BUSINESS ASSOCIATE</Link></li>
+      <li className={pathname === '/become-investor' ? 'active' : ''}><Link to="/become-investor">BECOME INVESTOR</Link></li>
       <li className={pathname === '/contact' ? 'active' : ''}><Link to="/contact">CONTACT</Link></li>
     </ul>
   )
@@ -130,6 +136,7 @@ function Header() {
   // Header button text varies by page
   const headerBtnText = pathname === '/service' ? 'Get Funded Now'
     : pathname === '/service-details' ? 'Get Funding'
+    : isGovernmentSchemes ? 'Browse Schemes'
     : 'CONTACT US'
 
   // All other pages: full header with middle-header + primary-header
@@ -185,7 +192,7 @@ function Header() {
             </div>
             <div className="header-right-wrap">
               <div className="header-right">
-                <Link to="/contact" className="header-btn">{headerBtnText}</Link>
+                <Link to={isGovernmentSchemes ? '/government-schemes' : '/contact'} className="header-btn">{headerBtnText}</Link>
                 <div className="sidebar-icon">
                   <button className="sidebar-trigger open" onClick={toggleSidebar}>
                     <span />

@@ -1,4 +1,71 @@
 export const schemesData = {
+  "national-agricultural-infra-financing": {
+    "cover_image": "assets/img/bg-img/page-header-bg.jpg",
+    "page_title": "National Agricultural Infra Financing - Startup Credit",
+    "service_name": "National Agricultural Infra Financing",
+    "service_details_image": "assets/img/project/project1.jpg",
+    "service_details_image_alt": "Farmer and agricultural finance support",
+    "page_body": "National Agricultural Infra Financing through the Agriculture Infrastructure Fund (AIF) is a central government initiative that provides medium to long-term debt financing for viable post-harvest management infrastructure and community farming assets. The fund supports projects such as warehouses, cold chains, sorting and grading units, assaying facilities, pack houses, silos, logistics hubs, and primary processing centers that improve agricultural value chains and reduce post-harvest losses. At StartupCredit, we help agri-entrepreneurs, FPOs, PACS, startups, cooperatives, and private operators structure bank-ready proposals, align project cash flows, and navigate AIF-linked benefits so that agricultural infrastructure projects can move from concept to sanctioned funding with greater speed and clarity.",
+    "download_files": [
+      {
+        "title": "AIF Official Portal",
+        "href": "https://agriinfra.dac.gov.in/"
+      },
+      {
+        "title": "AIF Scheme Guidelines",
+        "href": "https://agriinfra.dac.gov.in/Content/DocAttachment/FINALSchemeGuidelinesAIF.pdf"
+      }
+    ],
+    "feature_bullet_points": [
+      "3% interest subvention on loans up to Rs. 2 crore for up to 7 years",
+      "Credit guarantee cover available for eligible loans up to Rs. 2 crore",
+      "Total corpus of Rs. 1 lakh crore for agri infrastructure creation",
+      "Private entities can take up to 25 projects in different locations"
+    ],
+    "feature_image_1": "assets/img/service-detail/rural-industries/1.png",
+    "feature_image_2": "assets/img/service-detail/rural-industries/2.png",
+    "our_approach_body": "Our AIF financing approach starts with identifying the right infrastructure model, whether that is warehousing, cold chain, primary processing, aggregation, logistics, or community farming assets. We then help evaluate project viability, debt sizing, subsidy convergence opportunities, promoter contribution, and lender expectations. From DPR preparation and documentation to bank coordination, scheme positioning, and application tracking, we stay involved throughout the process so borrowers can access AIF-linked debt with stronger structuring and fewer delays.",
+    "faqs": [
+      {
+        "question": "Who can apply under National Agricultural Infra Financing through AIF?",
+        "answer": "Eligible applicants include farmers, agri-entrepreneurs, Primary Agricultural Credit Societies (PACS), Farmer Producer Organizations (FPOs), Self Help Groups (SHGs), startups, and central or state agencies involved in eligible agriculture infrastructure projects."
+      },
+      {
+        "question": "What are the main benefits available under AIF?",
+        "answer": "The key benefits include a 3% annual interest subvention on eligible loans up to Rs. 2 crore for a maximum of 7 years, credit guarantee coverage for eligible loans up to Rs. 2 crore, and the ability to converge the scheme with other central or state subsidies."
+      },
+      {
+        "question": "What kinds of projects are supported?",
+        "answer": "AIF supports viable post-harvest management infrastructure and community farming assets such as warehouses, cold chain facilities, grading and sorting units, silos, pack houses, logistics infrastructure, assaying units, and other agriculture value-chain assets."
+      },
+      {
+        "question": "Can one private entity apply for multiple projects?",
+        "answer": "Yes. Private entities can apply for up to 25 projects in different locations, subject to scheme conditions and lender appraisal."
+      }
+    ],
+    "other_services": [
+      {
+        "name": "CGTMSE Scheme",
+        "href": "service-details.html?scheme=cgtmse-scheme"
+      },
+      {
+        "name": "Rural Industries Funding",
+        "href": "service-details.html?scheme=rural-industries"
+      },
+      {
+        "name": "Working Capital Financing",
+        "href": "service-details.html?scheme=working-capital"
+      },
+      {
+        "name": "Term Loans",
+        "href": "service-details.html?scheme=term-loans"
+      },
+      {
+        "name": "Equipment Financing",
+        "href": "service-details.html?scheme=equipment-financing"
+      }
+    ]
+  },
   "invoice-financing": {
     "cover_image": "assets/img/bg-img/page-header-bg.jpg",
     "page_title": "Invoice Financing - Startup Credit",
