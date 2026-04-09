@@ -2,9 +2,9 @@ import { useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 
 export default function useScrollReset() {
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
 
   useEffect(() => {
-    window.scrollTo(0, 0)
-  }, [pathname])
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' })
+  }, [pathname, search])
 }

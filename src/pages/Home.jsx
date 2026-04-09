@@ -1,10 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Swiper, SwiperSlide } from 'swiper/react'
 import { Navigation, Pagination, Autoplay } from 'swiper/modules'
+import '../styles/home-popup.css'
+import '../styles/home-promos.css'
 
 function Home() {
   const [requestMsg, setRequestMsg] = useState('')
+  const [showEntryModal, setShowEntryModal] = useState(false)
+  const [entryMsg, setEntryMsg] = useState('')
 
   const handleRequestSubmit = (e) => {
     e.preventDefault()
@@ -13,8 +17,132 @@ function Home() {
     setTimeout(() => setRequestMsg(''), 5000)
   }
 
+  useEffect(() => {
+    const seenModal = sessionStorage.getItem('home-entry-modal-seen')
+
+    if (!seenModal) {
+      setShowEntryModal(true)
+      sessionStorage.setItem('home-entry-modal-seen', 'true')
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!showEntryModal) return undefined
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+    }
+  }, [showEntryModal])
+
+  const handleEntrySubmit = (e) => {
+    e.preventDefault()
+    setEntryMsg('Thanks! Our team will connect with you shortly.')
+    e.target.reset()
+    setTimeout(() => {
+      setEntryMsg('')
+      setShowEntryModal(false)
+    }, 1600)
+  }
+
+  const promoSchemes = [
+    { amount: 'Rs20cr', name: 'CGSS Scheme' },
+    { amount: 'Rs10cr', name: 'CGTMSE Loan' },
+    { amount: 'Rs10cr', name: 'NBFC Loan' },
+    { amount: 'Rs2cr', name: 'NAIF Loan' },
+  ]
+
+  const promoSupportCards = [
+    {
+      eyebrow: 'Save Upto',
+      title: '100% TAX',
+      description: 'with Tax Exemption Certificate',
+    },
+    {
+      eyebrow: '50+',
+      title: 'Government Certificate',
+      description: 'Delivered Pan India',
+    },
+    {
+      eyebrow: 'Register your business',
+      title: 'in just 7 days',
+      description: '',
+    },
+    {
+      eyebrow: 'Sell your',
+      title: 'Products & Services',
+      description: 'directly to Government GeM',
+    },
+  ]
+
   return (
     <>
+  {showEntryModal && (
+    <div className="home-entry-modal" role="dialog" aria-modal="true" aria-labelledby="home-entry-modal-title">
+      <div className="home-entry-modal__dialog">
+        <button
+          type="button"
+          className="home-entry-modal__close"
+          onClick={() => setShowEntryModal(false)}
+          aria-label="Close popup"
+        >
+          ×
+        </button>
+
+        <div className="home-entry-modal__grid">
+          <div className="home-entry-modal__left">
+            <span className="home-entry-modal__eyebrow">Guide Me Startup Credit</span>
+            <h2 id="home-entry-modal-title">
+              We help you access the <strong>right funding network</strong> for your next stage of growth.
+            </h2>
+            <p>
+              From government schemes and agri-infra support to MSME loans, investor connects, and incubation-ready
+              project guidance, we help founders move faster with better funding clarity.
+            </p>
+
+            <div className="home-entry-modal__stat">
+              <strong>655+</strong>
+              <span>projects already guided across startup, MSME, and scheme-led funding journeys</span>
+            </div>
+
+            <div className="home-entry-modal__cta">
+              Share your plans
+              <span>Get started now</span>
+            </div>
+
+            <div className="home-entry-modal__logos">
+              <img src="assets/img/sponsor/sponsor-1.png" alt="Client brand" />
+              <img src="assets/img/sponsor/sponsor-2.png" alt="Client brand" />
+              <img src="assets/img/sponsor/sponsor-3.png" alt="Client brand" />
+              <img src="assets/img/sponsor/sponsor-4.png" alt="Client brand" />
+              <img src="assets/img/sponsor/sponsor-5.png" alt="Client brand" />
+            </div>
+          </div>
+
+          <div className="home-entry-modal__right">
+            <h3>Need expert support?</h3>
+            <p>Drop your details and our team will help you identify the best funding route for your business.</p>
+
+            {entryMsg && <div className="alert alert-success mt-3">{entryMsg}</div>}
+
+            <form className="home-entry-modal__form" onSubmit={handleEntrySubmit}>
+              <input type="text" className="form-control" placeholder="Full Name" required />
+              <input type="email" className="form-control" placeholder="Email" required />
+              <input type="tel" className="form-control" placeholder="Phone no." required />
+              <button className="bz-primary-btn" type="submit">Submit</button>
+            </form>
+
+            <div className="home-entry-modal__note">
+              Already know what you need? Start with Select Project and we will guide the rest.
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )}
+
   <section className="hero-section">
     <div className="hero-mask-img">
       <div className="overlay" />
@@ -184,6 +312,97 @@ function Home() {
               <Link to="/service" className="bz-primary-btn">KNOW MORE <i className="fas fa-arrow-right" /></Link>
             </div>
           </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section className="home-promos-section pt-120 pb-120">
+    <div className="container">
+      <div className="home-promos-shell">
+        <div className="home-promos-grid fade-wrapper">
+          <div className="home-promo-panel home-promo-panel--white home-promo-col-6 fade-top">
+            <h3>50+</h3>
+            <p><strong>Government Funding</strong><br />schemes curated for different growth stages.</p>
+          </div>
+          <div className="home-promo-panel home-promo-col-6 fade-top">
+            <p>Funding Schemes for</p>
+            <h4>Manufacturing sector</h4>
+          </div>
+          <div className="home-promo-panel home-promo-col-7 fade-top">
+            <p>Funding Schemes for</p>
+            <h4>Service sector</h4>
+          </div>
+          <div className="home-promo-panel home-promo-panel--white home-promo-col-5 fade-top">
+            <p>Funding Schemes for</p>
+            <h4><strong>Agriculture sector</strong></h4>
+          </div>
+        </div>
+
+        <h2 className="home-promo-heading">Popular SCHEMES</h2>
+
+        <div className="home-promo-cards fade-wrapper">
+          {promoSchemes.map((item) => (
+            <div className="home-promo-card-wrap fade-top" key={item.name}>
+              <div className="home-promo-card">
+                <small>upto</small>
+                <strong>{item.amount}</strong>
+                <p>{item.name}</p>
+              </div>
+              <Link to="/select-project" className="home-promo-apply">
+                Apply Now
+                <i className="fas fa-arrow-right" />
+              </Link>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section className="home-promos-section pb-120">
+    <div className="container">
+      <div className="home-promos-shell">
+        <div className="home-promos-grid fade-wrapper">
+          <div className="home-promo-panel home-promo-panel--white home-promo-col-6 fade-top">
+            <h4>Suitable Business Entity</h4>
+            <div className="home-promo-chip-wrap">
+              {['Sole Proprietorship', 'NGO / Non-Profit', 'Pvt Ltd', 'LLP', 'Partnership Firm', 'OPC', 'MSME'].map((item) => (
+                <span className="home-promo-chip" key={item}>{item}</span>
+              ))}
+            </div>
+          </div>
+          <div className="home-promo-panel home-promo-col-6 fade-top">
+            <h4>Registrations for all stages of your business</h4>
+            <div className="home-promo-chip-wrap">
+              {['DPIIT', 'GST', 'MSME', 'Trademark', 'FSSAI', 'IEC', 'ISO'].map((item) => (
+                <span className="home-promo-chip" key={item}>{item}</span>
+              ))}
+            </div>
+          </div>
+          <div className="home-promo-panel home-promo-col-7 fade-top">
+            <h4>100% Transparent & Trackable Process</h4>
+          </div>
+          <div className="home-promo-panel home-promo-panel--white home-promo-col-5 fade-top">
+            <h4><strong>Trusted By Thousands</strong></h4>
+            <p><strong style={{ fontSize: '42px', color: '#101d36' }}>5000+</strong> Startups & MSME<br />Already Launched With Us.</p>
+          </div>
+        </div>
+
+        <div className="home-promo-cards fade-wrapper">
+          {promoSupportCards.map((item) => (
+            <div className="home-promo-card-wrap fade-top" key={item.title}>
+              <div className="home-promo-card">
+                <small>{item.eyebrow}</small>
+                <h5>{item.title}</h5>
+                {item.description ? <p className="home-promo-card__muted">{item.description}</p> : null}
+              </div>
+              <Link to="/select-project" className="home-promo-apply">
+                Apply Now
+                <i className="fas fa-arrow-right" />
+              </Link>
+            </div>
+          ))}
         </div>
       </div>
     </div>

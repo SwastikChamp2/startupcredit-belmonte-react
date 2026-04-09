@@ -1,0 +1,90 @@
+.header-4 .primary-header .primary-header-inner {
+  flex-wrap: nowrap;
+  gap: 20px;
+}
+
+.header-3 .primary-header-inner .inner-left {
+  flex: 1 1 auto;
+  min-width: 0;
+  column-gap: 28px;
+}
+
+.header-3 .primary-header-inner .inner-left .header-menu-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.header-3 .primary-header-inner .inner-left .header-menu-wrap ul {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+}
+
+.header-3 .primary-header-inner .inner-left .header-menu-wrap ul li {
+  margin: 0 12px;
+}
+
+.header-3 .primary-header-inner .inner-left .header-menu-wrap ul li a {
+  padding: 31px 0;
+  font-size: 15px;
+}
+
+.header-3 .primary-header-inner .inner-left .header-menu-wrap ul li ul.services-grid-menu {
+  width: min(920px, calc(100vw - 140px));
+  min-width: 920px;
+  left: 50%;
+  top: 78px;
+  gap: 22px;
+  transform: translateX(-34%) rotate3d(1, 0, 0, -90deg);
+  transform-origin: top center;
+}
+
+.header-3 .primary-header-inner .inner-left .header-menu-wrap ul li:hover > ul.services-grid-menu {
+  transform: translateX(-34%);
+}
+
+.header-3 .primary-header-inner .header-right-wrap {
+  flex: 0 0 auto;
+}
+
+@media (max-width: 1399px) {
+  .header-3 .primary-header-inner .inner-left {
+    column-gap: 20px;
+  }
+
+  .header-3 .primary-header-inner .inner-left .header-menu-wrap ul li {
+    margin: 0 9px;
+  }
+
+  .header-3 .primary-header-inner .inner-left .header-menu-wrap ul li a {
+    font-size: 14px;
+  }
+
+  .header-3 .primary-header-inner .inner-left .header-menu-wrap ul li ul.services-grid-menu {
+    min-width: 780px;
+    width: min(780px, calc(100vw - 120px));
+    transform: translateX(-38%) rotate3d(1, 0, 0, -90deg);
+  }
+
+  .header-3 .primary-header-inner .inner-left .header-menu-wrap ul li:hover > ul.services-grid-menu {
+    transform: translateX(-38%);
+  }
+}
+
+@media only screen and (max-width: 992px) {
+  .header-4 .primary-header .primary-header-inner {
+    flex-wrap: wrap;
+  }
+
+  .header-3 .primary-header-inner .inner-left .header-menu-wrap ul li ul.services-grid-menu {
+    min-width: auto;
+    width: 220px;
+    left: 0;
+    transform: rotate3d(1, 0, 0, -90deg);
+    transform-origin: 0 0;
+  }
+
+  .header-3 .primary-header-inner .inner-left .header-menu-wrap ul li:hover > ul.services-grid-menu {
+    transform: none;
+  }
+}

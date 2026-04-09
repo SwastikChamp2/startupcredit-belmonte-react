@@ -30,6 +30,7 @@ function Layout() {
   useImageReveal()
   useFadeWrapper()
   useCustomCursor()
+  useScrollReset()
 
   return (
     <>

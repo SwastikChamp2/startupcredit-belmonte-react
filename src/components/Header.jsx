@@ -1,4 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
+import '../styles/header-fixes.css'
 
 const servicesGridMenu = (
   <ul className="services-grid-menu">
