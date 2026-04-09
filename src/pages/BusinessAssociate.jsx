@@ -2,6 +2,54 @@ import { useState } from 'react'
 import PageHeader from '../components/PageHeader'
 import FileUploadBox from '../components/FileUploadBox'
 
+const mobileValidationProps = {
+  inputMode: 'numeric',
+  pattern: '[0-9]{10}',
+  maxLength: 10,
+  title: 'Please enter a 10-digit mobile number',
+  onInput: (e) => {
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10)
+  },
+  onInvalid: (e) => {
+    e.target.setCustomValidity('Please enter a valid 10-digit mobile number')
+  },
+  onChange: (e) => {
+    e.target.setCustomValidity('')
+  },
+}
+
+const aadhaarValidationProps = {
+  inputMode: 'numeric',
+  pattern: '[0-9]{12}',
+  maxLength: 12,
+  title: 'Please enter a 12-digit Aadhaar number',
+  onInput: (e) => {
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 12)
+  },
+  onInvalid: (e) => {
+    e.target.setCustomValidity('Please enter a valid 12-digit Aadhaar number')
+  },
+  onChange: (e) => {
+    e.target.setCustomValidity('')
+  },
+}
+
+const panValidationProps = {
+  inputMode: 'text',
+  pattern: '[A-Za-z]{5}[0-9]{4}[A-Za-z]{1}',
+  maxLength: 10,
+  title: 'Please enter a valid 10-character PAN number',
+  onInput: (e) => {
+    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10)
+  },
+  onInvalid: (e) => {
+    e.target.setCustomValidity('Please enter a valid PAN number in 10-character format')
+  },
+  onChange: (e) => {
+    e.target.setCustomValidity('')
+  },
+}
+
 function BusinessAssociate() {
   const [msg, setMsg] = useState('')
   const [aadhaarFile, setAadhaarFile] = useState(null)
@@ -143,7 +191,7 @@ function BusinessAssociate() {
                       </div>
                       <div className="col-md-6">
                         <div className="form-item">
-                          <input type="tel" name="mobile" className="form-control" placeholder="Mobile Number *" required />
+                          <input type="tel" name="mobile" className="form-control" placeholder="Mobile Number *" required {...mobileValidationProps} />
                           <div className="icon"><i className="fas fa-phone" /></div>
                         </div>
                       </div>
@@ -188,7 +236,7 @@ function BusinessAssociate() {
                     <div className="form-group row">
                       <div className="col-md-6">
                         <div className="form-item">
-                          <input type="text" name="aadhaarNumber" className="form-control" placeholder="Aadhaar Number *" required />
+                          <input type="text" name="aadhaarNumber" className="form-control" placeholder="Aadhaar Number *" required {...aadhaarValidationProps} />
                           <div className="icon"><i className="fas fa-id-card" /></div>
                         </div>
                       </div>
@@ -206,7 +254,7 @@ function BusinessAssociate() {
                     <div className="form-group row">
                       <div className="col-md-6">
                         <div className="form-item">
-                          <input type="text" name="panNumber" className="form-control" placeholder="PAN Card Number *" required />
+                          <input type="text" name="panNumber" className="form-control" placeholder="PAN Card Number *" required {...panValidationProps} />
                           <div className="icon"><i className="fas fa-id-badge" /></div>
                         </div>
                       </div>

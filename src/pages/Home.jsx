@@ -5,9 +5,29 @@ import { Navigation, Pagination, Autoplay } from 'swiper/modules'
 import '../styles/home-popup.css'
 import '../styles/home-promos.css'
 
+const mobileValidationProps = {
+  inputMode: 'numeric',
+  pattern: '[0-9]{10}',
+  maxLength: 10,
+  title: 'Please enter a 10-digit mobile number',
+  onInput: (e) => {
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10)
+  },
+  onInvalid: (e) => {
+    e.target.setCustomValidity('Please enter a valid 10-digit mobile number')
+  },
+  onChange: (e) => {
+    e.target.setCustomValidity('')
+  },
+}
+
 function Home() {
   const [requestMsg, setRequestMsg] = useState('')
-  const [showEntryModal, setShowEntryModal] = useState(false)
+  const [showEntryModal, setShowEntryModal] = useState(() => {
+    if (typeof window === 'undefined') return false
+
+    return !window.sessionStorage.getItem('home-entry-modal-seen')
+  })
   const [entryMsg, setEntryMsg] = useState('')
 
   const handleRequestSubmit = (e) => {
@@ -18,13 +38,10 @@ function Home() {
   }
 
   useEffect(() => {
-    const seenModal = sessionStorage.getItem('home-entry-modal-seen')
-
-    if (!seenModal) {
-      setShowEntryModal(true)
-      sessionStorage.setItem('home-entry-modal-seen', 'true')
+    if (showEntryModal) {
+      window.sessionStorage.setItem('home-entry-modal-seen', 'true')
     }
-  }, [])
+  }, [showEntryModal])
 
   useEffect(() => {
     if (!showEntryModal) return undefined
@@ -130,7 +147,7 @@ function Home() {
             <form className="home-entry-modal__form" onSubmit={handleEntrySubmit}>
               <input type="text" className="form-control" placeholder="Full Name" required />
               <input type="email" className="form-control" placeholder="Email" required />
-              <input type="tel" className="form-control" placeholder="Phone no." required />
+              <input type="tel" className="form-control" placeholder="Phone no." required {...mobileValidationProps} />
               <button className="bz-primary-btn" type="submit">Submit</button>
             </form>
 
@@ -687,7 +704,7 @@ function Home() {
               <div className="form-group row">
                 <div className="col-md-12">
                   <div className="form-item">
-                    <input type="text" name="phone" className="form-control" placeholder="Phone number*" />
+                    <input type="tel" name="phone" className="form-control" placeholder="Phone number*" {...mobileValidationProps} />
                   </div>
                 </div>
               </div>

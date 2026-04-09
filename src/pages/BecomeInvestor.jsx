@@ -2,6 +2,42 @@ import { useState } from 'react'
 import PageHeader from '../components/PageHeader'
 import FileUploadBox from '../components/FileUploadBox'
 
+const aadhaarValidationProps = {
+  inputMode: 'numeric',
+  pattern: '[0-9]{12}',
+  maxLength: 12,
+  title: 'Please enter a 12-digit Aadhaar number',
+  onInput: (e) => {
+    e.target.value = e.target.value.replace(/\D/g, '').slice(0, 12)
+  },
+  onInvalid: (e) => {
+    if (e.target.value.length > 0) {
+      e.target.setCustomValidity('Please enter a valid 12-digit Aadhaar number')
+    }
+  },
+  onChange: (e) => {
+    e.target.setCustomValidity('')
+  },
+}
+
+const panValidationProps = {
+  inputMode: 'text',
+  pattern: '[A-Za-z]{5}[0-9]{4}[A-Za-z]{1}',
+  maxLength: 10,
+  title: 'Please enter a valid 10-character PAN number',
+  onInput: (e) => {
+    e.target.value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10)
+  },
+  onInvalid: (e) => {
+    if (e.target.value.length > 0) {
+      e.target.setCustomValidity('Please enter a valid PAN number in 10-character format')
+    }
+  },
+  onChange: (e) => {
+    e.target.setCustomValidity('')
+  },
+}
+
 function BecomeInvestor() {
   const [msg, setMsg] = useState('')
   const [investorType, setInvestorType] = useState('individual')
@@ -239,7 +275,7 @@ function BecomeInvestor() {
                         <div className="form-group row">
                           <div className="col-md-6">
                             <div className="form-item">
-                              <input type="text" name="aadhaarNumber" className="form-control" placeholder="Aadhaar Card No (Optional)" />
+                              <input type="text" name="aadhaarNumber" className="form-control" placeholder="Aadhaar Card No (Optional)" {...aadhaarValidationProps} />
                               <div className="icon"><i className="fas fa-id-card" /></div>
                             </div>
                           </div>
@@ -256,7 +292,7 @@ function BecomeInvestor() {
                         <div className="form-group row">
                           <div className="col-md-6">
                             <div className="form-item">
-                              <input type="text" name="panNumber" className="form-control" placeholder="PAN Card No (Optional)" />
+                              <input type="text" name="panNumber" className="form-control" placeholder="PAN Card No (Optional)" {...panValidationProps} />
                               <div className="icon"><i className="fas fa-id-badge" /></div>
                             </div>
                           </div>
