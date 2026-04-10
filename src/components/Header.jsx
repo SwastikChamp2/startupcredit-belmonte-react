@@ -92,7 +92,6 @@ function Header() {
       <li className={pathname === '/select-project' ? 'active' : ''}><Link to="/select-project">SELECT PROJECT</Link></li>
       <li className={pathname === '/business-associate' ? 'active' : ''}><Link to="/business-associate">BUSINESS ASSOCIATE</Link></li>
       <li className={pathname === '/become-investor' ? 'active' : ''}><Link to="/become-investor">BECOME INVESTOR</Link></li>
-      <li className={pathname === '/contact' ? 'active' : ''}><Link to="/contact">CONTACT</Link></li>
     </ul>
   )
 

@@ -27,6 +27,22 @@ function Sidebar() {
           </div>
           <ul className="side-menu-list">
             <li>
+              <i className="fas fa-house" />
+              <Link to="/" onClick={closeSidebar}>Home</Link>
+            </li>
+            <li>
+              <i className="fas fa-circle-info" />
+              <Link to="/about" onClick={closeSidebar}>About</Link>
+            </li>
+            <li>
+              <i className="fas fa-briefcase" />
+              <Link to="/service" onClick={closeSidebar}>Services</Link>
+            </li>
+            <li>
+              <i className="fas fa-envelope" />
+              <Link to="/contact" onClick={closeSidebar}>Contact Us</Link>
+            </li>
+            <li>
               <i className="fas fa-diagram-project" />
               <Link to="/select-project" onClick={closeSidebar}>Select Project</Link>
             </li>
@@ -45,7 +61,7 @@ function Sidebar() {
             <h3>About Us</h3>
           </div>
           <p>From government schemes to private investors, we simplify startup financing by connecting you with the right funding options and expertly guide you through the complete process.</p>
-          <Link to="/contact" className="bz-primary-btn">CONTACT US</Link>
+          <Link to="/contact" className="bz-primary-btn" onClick={closeSidebar}>CONTACT US</Link>
         </div>
         <div className="side-menu-contact">
           <div className="side-menu-header">
