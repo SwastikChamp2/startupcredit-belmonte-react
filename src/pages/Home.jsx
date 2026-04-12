@@ -4,6 +4,7 @@ import { Swiper, SwiperSlide } from 'swiper/react'
 import { Navigation, Pagination, Autoplay } from 'swiper/modules'
 import '../styles/home-popup.css'
 import '../styles/home-promos.css'
+import '../styles/home-overrides.css'
 
 const mobileValidationProps = {
   inputMode: 'numeric',
@@ -169,7 +170,6 @@ function Home() {
     <div className="shapes">
       <div className="shape shape-1"><img src="assets/img/shapes/hero-shape-1.png" alt="shape" /></div>
       <div className="shape shape-2"><img src="assets/img/shapes/hero-shape-2.png" alt="shape" /></div>
-      <div className="shape shape-3"><img src="assets/img/shapes/hero-shape-3.png" alt="shape" /></div>
       <div className="shape shape-4"><img src="assets/img/shapes/hero-shape-4.png" alt="shape" /></div>
       <div className="round-shape" />
     </div>

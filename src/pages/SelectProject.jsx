@@ -2,6 +2,12 @@ import { useState } from 'react'
 import PageHeader from '../components/PageHeader'
 import { nicData } from '../data/nicData'
 
+const formatSectionLabel = (section) => `Section ${section.section_code} - ${section.section_name}`
+
+const formatDivisionLabel = (division) => `Division ${division.division_code} - ${division.division_name}`
+
+const formatGroupLabel = (group) => `Group ${group.group_code} - ${group.group_name}`
+
 function SelectProject() {
   const [msg, setMsg] = useState('')
   const [sectionIdx, setSectionIdx] = useState('')
@@ -66,7 +72,7 @@ function SelectProject() {
                           >
                             <option value="">Select Project Section</option>
                             {nicData.map((section, idx) => (
-                              <option key={idx} value={idx}>{section.name}</option>
+                              <option key={section.section_code} value={idx}>{formatSectionLabel(section)}</option>
                             ))}
                           </select>
                           <div className="icon"><i className="fas fa-layer-group" /></div>
@@ -86,7 +92,7 @@ function SelectProject() {
                           >
                             <option value="">Select Project Division</option>
                             {divisions.map((division, idx) => (
-                              <option key={idx} value={idx}>{division.name}</option>
+                              <option key={division.division_code} value={idx}>{formatDivisionLabel(division)}</option>
                             ))}
                           </select>
                           <div className="icon"><i className="fas fa-sitemap" /></div>
@@ -106,7 +112,7 @@ function SelectProject() {
                           >
                             <option value="">Select Project Group</option>
                             {groups.map((group, idx) => (
-                              <option key={idx} value={idx}>{group}</option>
+                              <option key={group.group_code} value={idx}>{formatGroupLabel(group)}</option>
                             ))}
                           </select>
                           <div className="icon"><i className="fas fa-tags" /></div>

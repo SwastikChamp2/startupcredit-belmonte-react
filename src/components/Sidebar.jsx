@@ -1,8 +1,7 @@
 import { Link } from 'react-router-dom'
 
 function Sidebar() {
-  const closeSidebar = (e) => {
-    e.preventDefault()
+  const closeSidebar = () => {
     document.body.classList.remove('open-sidebar')
   }
 

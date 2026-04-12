@@ -1,0 +1,6 @@
+.hero-section .shape.shape-3,
+.hero-section .swiper-pagination,
+.hero-section .bizan-swiper-pagination,
+.hero-section .swiper-pagination-bullets {
+  display: none !important;
+}
