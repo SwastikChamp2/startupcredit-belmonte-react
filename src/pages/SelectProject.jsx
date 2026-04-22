@@ -10,6 +10,7 @@ const formatNicCodeLabel = (sc) => `NIC ${sc.code} - ${sc.name}`
 
 function SelectProject() {
   const [msg, setMsg] = useState('')
+  const [toast, setToast] = useState('')
   const [sectionIdx, setSectionIdx] = useState('')
   const [divisionIdx, setDivisionIdx] = useState('')
   const [groupIdx, setGroupIdx] = useState('')
@@ -19,6 +20,15 @@ function SelectProject() {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const searchRef = useRef(null)
   const isSelectingRef = useRef(false)
+
+  const showToast = (message) => {
+    setToast(message)
+    setTimeout(() => setToast(''), 2500)
+  }
+
+  const handleDisabledClick = (fieldName, dependsOn) => () => {
+    showToast(`Please select ${dependsOn} first to enable ${fieldName}`)
+  }
 
   // Close suggestions when clicking outside the search container
   useEffect(() => {
@@ -105,6 +115,28 @@ function SelectProject() {
     <>
       <PageHeader title="Select Project" breadcrumb="Select Project" />
 
+      {toast && (
+        <div style={{
+          position: 'fixed',
+          top: '110px',
+          right: '30px',
+          zIndex: 9999,
+          padding: '14px 22px',
+          background: '#fff3cd',
+          color: '#856404',
+          border: '1px solid #ffeeba',
+          borderRadius: '8px',
+          boxShadow: '0 6px 20px rgba(0,0,0,0.15)',
+          fontSize: '14px',
+          fontWeight: 600,
+          maxWidth: '360px',
+          animation: 'slideInRight 0.3s ease'
+        }}>
+          <i className="fas fa-exclamation-circle" style={{ marginRight: 10, color: '#f0ad4e' }} />
+          {toast}
+        </div>
+      )}
+
       <section className="contact-section pt-130 pb-130">
         <div className="container">
           <div className="row justify-content-center">
@@ -144,10 +176,13 @@ function SelectProject() {
                     </div>
                     <div className="form-group row">
                       <div className="col-md-12">
-                        <div className="form-item">
+                        <div
+                          className="form-item"
+                          onClick={sectionIdx === '' ? handleDisabledClick('Division', 'Section') : undefined}
+                        >
                           <select
                             name="projectDivision"
-                            className="form-control"
+                            className={`form-control${sectionIdx === '' ? ' is-disabled' : ''}`}
                             value={divisionIdx}
                             onChange={handleDivisionChange}
                             disabled={sectionIdx === ''}
@@ -164,10 +199,13 @@ function SelectProject() {
                     </div>
                     <div className="form-group row">
                       <div className="col-md-12">
-                        <div className="form-item">
+                        <div
+                          className="form-item"
+                          onClick={divisionIdx === '' ? handleDisabledClick('Group', 'Division') : undefined}
+                        >
                           <select
                             name="projectGroup"
-                            className="form-control"
+                            className={`form-control${divisionIdx === '' ? ' is-disabled' : ''}`}
                             value={groupIdx}
                             onChange={handleGroupChange}
                             disabled={divisionIdx === ''}
@@ -184,10 +222,13 @@ function SelectProject() {
                     </div>
                     <div className="form-group row">
                       <div className="col-md-12">
-                        <div className="form-item">
+                        <div
+                          className="form-item"
+                          onClick={groupIdx === '' ? handleDisabledClick('Class', 'Group') : undefined}
+                        >
                           <select
                             name="projectClass"
-                            className="form-control"
+                            className={`form-control${groupIdx === '' ? ' is-disabled' : ''}`}
                             value={classIdx}
                             onChange={handleClassChange}
                             disabled={groupIdx === ''}
@@ -274,6 +315,29 @@ function SelectProject() {
                         </div>
                       </div>
                     </div> */}
+                    <div className="form-group row">
+                      <div className="col-md-12">
+                        <div
+                          className="form-item"
+                          onClick={classIdx === '' ? handleDisabledClick('Subclass (NIC Code)', 'Class') : undefined}
+                        >
+                          <select
+                            name="nicCode"
+                            className={`form-control${classIdx === '' ? ' is-disabled' : ''}`}
+                            value={nicCodeIdx}
+                            onChange={(e) => setNicCodeIdx(e.target.value)}
+                            disabled={classIdx === ''}
+                            required
+                          >
+                            <option value="">Select Subclass (NIC Code)</option>
+                            {nicCodes.map((sc, idx) => (
+                              <option key={sc.code} value={idx}>{formatNicCodeLabel(sc)}</option>
+                            ))}
+                          </select>
+                          <div className="icon"><i className="fas fa-barcode" /></div>
+                        </div>
+                      </div>
+                    </div>
                     <div className="form-group row">
                       <div className="col-md-12">
                         <div className="form-item message-item">

@@ -92,6 +92,29 @@
 
 .mt-80 { margin-top: 80px; }
 
+/* Disabled select field styling (Select Project page) */
+.form-item .form-control.is-disabled,
+.form-item .form-control:disabled {
+  background-color: #f0f0f0 !important;
+  color: #a0a0a0 !important;
+  cursor: not-allowed !important;
+  opacity: 0.75;
+  border-color: #e0e0e0 !important;
+}
+
+.form-item:has(.form-control.is-disabled) {
+  cursor: not-allowed;
+}
+
+.form-item:has(.form-control.is-disabled) .icon {
+  opacity: 0.4;
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to { transform: translateX(0); opacity: 1; }
+}
+
 @media only screen and (max-width: 992px) {
   .header-4 .primary-header .primary-header-inner {
     flex-wrap: wrap;

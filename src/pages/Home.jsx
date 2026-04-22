@@ -24,11 +24,7 @@ const mobileValidationProps = {
 
 function Home() {
   const [requestMsg, setRequestMsg] = useState('')
-  const [showEntryModal, setShowEntryModal] = useState(() => {
-    if (typeof window === 'undefined') return false
-
-    return !window.sessionStorage.getItem('home-entry-modal-seen')
-  })
+  const [showEntryModal, setShowEntryModal] = useState(false)
   const [entryMsg, setEntryMsg] = useState('')
 
   const handleRequestSubmit = (e) => {
@@ -38,11 +34,18 @@ function Home() {
     setTimeout(() => setRequestMsg(''), 5000)
   }
 
+  // Show the entry modal only after the preloader (2000ms) finishes
   useEffect(() => {
-    if (showEntryModal) {
+    if (typeof window === 'undefined') return undefined
+    if (window.sessionStorage.getItem('home-entry-modal-seen')) return undefined
+
+    const timer = setTimeout(() => {
+      setShowEntryModal(true)
       window.sessionStorage.setItem('home-entry-modal-seen', 'true')
-    }
-  }, [showEntryModal])
+    }, 2100)
+
+    return () => clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
     if (!showEntryModal) return undefined
