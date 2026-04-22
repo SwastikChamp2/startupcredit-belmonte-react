@@ -202,7 +202,7 @@ function SelectProject() {
                         </div>
                       </div>
                     </div>
-                    <div className="form-group row">
+                    {/* <div className="form-group row">
                       <div className="col-md-12">
                         <div className="form-item" ref={searchRef} style={{ position: 'relative' }}>
                           <input
@@ -273,7 +273,7 @@ function SelectProject() {
                           <div className="icon"><i className="fas fa-barcode" /></div>
                         </div>
                       </div>
-                    </div>
+                    </div> */}
                     <div className="form-group row">
                       <div className="col-md-12">
                         <div className="form-item message-item">
