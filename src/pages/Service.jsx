@@ -1,33 +1,72 @@
-import { Link } from 'react-router-dom'
+import { useMemo, useEffect, useRef } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
-import { servicesData } from '../data/servicesData'
+import { serviceSections, servicesBySection } from '../data/servicesData'
 
 function Service() {
+  const [searchParams] = useSearchParams()
+  const highlightSection = searchParams.get('section')
+  const highlightRef = useRef(null)
+
+  // Reorder sections: if a section is specified, move it to the top
+  const orderedSections = useMemo(() => {
+    if (!highlightSection || !servicesBySection[highlightSection]) return serviceSections
+    const target = serviceSections.find(s => s.id === highlightSection)
+    const rest = serviceSections.filter(s => s.id !== highlightSection)
+    return [target, ...rest]
+  }, [highlightSection])
+
+  // Scroll to the highlighted section, or to top when no section specified
+  useEffect(() => {
+    if (highlightSection && highlightRef.current) {
+      highlightRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    } else {
+      window.scrollTo(0, 0)
+    }
+  }, [highlightSection])
+
   return (
     <>
       <PageHeader title="Our Services" breadcrumb="Our Services" />
 
       <section className="service-section-4 pt-120 pb-120">
         <div className="container">
-          <div className="row gy-4 fade-wrapper" id="services-container">
-            {servicesData.map((service, i) => (
-              <div className="col-lg-4 col-md-6" key={i}>
-                <Link to={`/service-details?scheme=${service.scheme}`} className="service-card-link">
-                  <div className="service-item-4 fade-top">
-                    <div className="service-thumb">
-                      <img className="main-img" src={service.image} alt={service.alt} />
-                      <div className="icon"><img src="assets/img/icon/service-icon-5.png" alt="icon" /></div>
+          {orderedSections.map((section, sIdx) => {
+            const services = servicesBySection[section.id] || []
+            if (services.length === 0) return null
+
+            return (
+              <div
+                key={section.id}
+                ref={sIdx === 0 && highlightSection ? highlightRef : undefined}
+                className={sIdx > 0 ? 'mt-80' : ''}
+                id={section.id}
+              >
+                <div className="section-heading mb-40">
+                  <h2 className="section-title mb-0" data-text-animation data-split="word" data-duration={1}>{section.title}</h2>
+                </div>
+                <div className="row gy-4 fade-wrapper">
+                  {services.map((service, i) => (
+                    <div className="col-lg-4 col-md-6" key={i}>
+                      <Link to={`/service-details?scheme=${service.scheme}`} className="service-card-link">
+                        <div className="service-item-4 fade-top">
+                          <div className="service-thumb">
+                            <img className="main-img" src={service.image} alt={service.alt} />
+                            <div className="icon"><img src="assets/img/icon/service-icon-5.png" alt="icon" /></div>
+                          </div>
+                          <div className="service-content">
+                            <h3 className="title">{service.title}</h3>
+                            <p>{service.description}</p>
+                            <span className="read-more">READ DETAILS &#10140;</span>
+                          </div>
+                        </div>
+                      </Link>
                     </div>
-                    <div className="service-content">
-                      <h3 className="title">{service.title}</h3>
-                      <p>{service.description}</p>
-                      <span className="read-more">READ DETAILS &#10140;</span>
-                    </div>
-                  </div>
-                </Link>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
+            )
+          })}
         </div>
       </section>
 

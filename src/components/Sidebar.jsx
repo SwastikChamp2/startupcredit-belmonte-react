@@ -42,6 +42,10 @@ function Sidebar() {
               <Link to="/contact" onClick={closeSidebar}>Contact Us</Link>
             </li>
             <li>
+              <i className="fas fa-landmark" />
+              <Link to="/government-schemes" onClick={closeSidebar}>Government Scheme</Link>
+            </li>
+            <li>
               <i className="fas fa-diagram-project" />
               <Link to="/select-project" onClick={closeSidebar}>Select Project</Link>
             </li>

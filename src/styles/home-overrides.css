@@ -4,3 +4,53 @@
 .hero-section .swiper-pagination-bullets {
   display: none !important;
 }
+
+.project-section .swiper-pagination,
+.testimonial-section .swiper-pagination {
+  display: none !important;
+}
+
+/* OUR SERVICES button hover dropdown */
+.hero-services-dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.hero-services-menu {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  min-width: 220px;
+  margin-bottom: 8px;
+  padding: 10px 0;
+  list-style: none;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.15);
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(8px);
+  transition: opacity 0.25s ease, transform 0.25s ease, visibility 0.25s ease;
+  z-index: 100;
+}
+
+.hero-services-dropdown:hover .hero-services-menu {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.hero-services-menu li a {
+  display: block;
+  padding: 10px 20px;
+  color: #14213d;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.hero-services-menu li a:hover {
+  background: #f0f7ff;
+  color: #1e6ee7;
+}

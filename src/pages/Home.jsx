@@ -183,7 +183,15 @@ function Home() {
           </div>
           <div className="hero-btn-wrap">
             <Link to="/contact" className="bz-primary-btn">CONTACT US <i className="fas fa-arrow-right" /></Link>
-            <Link to="/service" className="bz-primary-btn hero-btn">OUR SERVICES</Link>
+            <div className="hero-services-dropdown">
+              <Link to="/service" className="bz-primary-btn hero-btn">OUR SERVICES</Link>
+              <ul className="hero-services-menu">
+                <li><Link to="/service?section=government-funding">Government Funding</Link></li>
+                <li><Link to="/service?section=startup-funding">Startup Funding</Link></li>
+                <li><Link to="/service?section=financing-options">Financing Options</Link></li>
+                <li><Link to="/service?section=special-categories">Special Categories</Link></li>
+              </ul>
+            </div>
           </div>
         </div>
       </div>

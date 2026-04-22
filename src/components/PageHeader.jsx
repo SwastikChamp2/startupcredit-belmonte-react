@@ -3,11 +3,11 @@ import { Link } from 'react-router-dom'
 function PageHeader({ title, breadcrumb }) {
   return (
     <section className="page-header">
-  <div className="bg-img" data-background="assets/img/bg-img/page-header-bg.jpg" />
+  <div className="bg-img" style={{ backgroundImage: 'url(/assets/img/bg-img/page-header-bg.jpg)' }} />
   <div className="overlay" />
   <div className="shapes">
-    <div className="shape shape-1"><img src="assets/img/shapes/pager-header-shape-1.png" alt="shape" /></div>
-    <div className="shape shape-2"><img src="assets/img/shapes/pager-header-shape-2.png" alt="shape" /></div>
+    <div className="shape shape-1"><img src="/assets/img/shapes/pager-header-shape-1.png" alt="shape" /></div>
+    <div className="shape shape-2"><img src="/assets/img/shapes/pager-header-shape-2.png" alt="shape" /></div>
   </div>
   <div className="container">
     <div className="page-header-content">

@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
 import {
@@ -11,12 +11,13 @@ import '../styles/government-schemes.css'
 const viewOptions = new Set(['scheme-wise', 'category-wise'])
 
 function GovernmentSchemes() {
-  const [searchParams, setSearchParams] = useSearchParams()
-  const activeView = viewOptions.has(searchParams.get('view'))
-    ? searchParams.get('view')
-    : 'scheme-wise'
-  const activeCategoryId = searchParams.get('category') || governmentSchemeCategories[0].id
-  const searchTerm = searchParams.get('search') || ''
+  const [searchParams] = useSearchParams()
+  const initialView = viewOptions.has(searchParams.get('view')) ? searchParams.get('view') : 'scheme-wise'
+  const initialCategory = searchParams.get('category') || governmentSchemeCategories[0].id
+
+  const [activeView, setActiveView] = useState(initialView)
+  const [activeCategoryId, setActiveCategoryId] = useState(initialCategory)
+  const [searchTerm, setSearchTerm] = useState('')
 
   const filteredSchemes = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
@@ -41,29 +42,16 @@ function GovernmentSchemes() {
   const visibleCategorySchemes = filteredSchemes.filter((scheme) => scheme.categoryId === visibleCategory.id)
 
   const setView = (nextView) => {
-    const nextParams = new URLSearchParams(searchParams)
-    nextParams.set('view', nextView)
-    setSearchParams(nextParams)
+    setActiveView(nextView)
   }
 
   const setCategory = (categoryId) => {
-    const nextParams = new URLSearchParams(searchParams)
-    nextParams.set('view', 'category-wise')
-    nextParams.set('category', categoryId)
-    setSearchParams(nextParams)
+    setActiveCategoryId(categoryId)
+    setActiveView('category-wise')
   }
 
   const setSearch = (event) => {
-    const nextParams = new URLSearchParams(searchParams)
-    const nextValue = event.target.value
-
-    if (nextValue) {
-      nextParams.set('search', nextValue)
-    } else {
-      nextParams.delete('search')
-    }
-
-    setSearchParams(nextParams)
+    setSearchTerm(event.target.value)
   }
 
   return (
@@ -127,7 +115,7 @@ function GovernmentSchemes() {
                 <i className="fa-solid fa-magnifying-glass" />
                 <input
                   type="search"
-                  placeholder="Search by scheme, category, or ministry"
+                  placeholder="Search by scheme or category"
                   value={searchTerm}
                   onChange={setSearch}
                 />
@@ -153,7 +141,6 @@ function GovernmentSchemes() {
                       <h3>{scheme.name}</h3>
 
                       <div className="gs-card-footer">
-                        <span>Open detail page</span>
                         <span className="gs-link">
                           View Scheme
                           <i className="fa-solid fa-arrow-right" />

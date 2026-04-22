@@ -39,7 +39,7 @@
   padding: 42px;
   border: 1px solid rgba(33, 181, 222, 0.14);
   border-radius: 28px;
-  background: linear-gradient(135deg, #0d2c54 0%, #123967 38%, #eaf6ff 38%, #f8fcff 100%);
+  background: linear-gradient(120deg, #0d2c54 0%, #123967 55%, #eaf6ff 50%, #f8fcff 100%);
   box-shadow: var(--gs-shadow);
 }
 
@@ -103,10 +103,10 @@
 }
 
 .gs-hero p {
-  max-width: 680px;
+  max-width: 540px;
   margin-bottom: 0;
   color: rgba(255, 255, 255, 0.82);
-  font-size: 17px;
+  font-size: 16px;
   line-height: 1.75;
 }
 
@@ -148,7 +148,9 @@
 
 .gs-toggle {
   display: inline-flex;
-  padding: 6px;
+  padding: 2px;
+  height: 50px;
+  align-items: center;
   border: 1px solid var(--gs-line);
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.85);
@@ -157,11 +159,13 @@
 
 .gs-toggle button {
   border: 0;
-  padding: 12px 22px;
+  height: 50px;
+  min-width: 140px;
+  padding: 0 28px;
   border-radius: 999px;
   background: transparent;
   color: var(--gs-muted);
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 700;
   transition: 0.25s ease;
 }
@@ -191,6 +195,10 @@
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.95);
   color: var(--gs-ink);
+}
+
+.gs-search input::placeholder {
+  color: #a0aec0;
 }
 
 .gs-search i {
