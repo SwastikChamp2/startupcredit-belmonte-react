@@ -13,10 +13,22 @@ import BecomeInvestor from './pages/BecomeInvestor'
 import Error from './pages/Error'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import TermsConditions from './pages/TermsConditions'
+import AdminLogin from './pages/admin/AdminLogin'
+import AdminRedirect from './pages/admin/AdminRedirect'
+import AdminUsers from './pages/admin/AdminUsers'
+import AdminProjectInquiries from './pages/admin/AdminProjectInquiries'
+import AdminProjects from './pages/admin/AdminProjects'
+import AdminProjectDetail from './pages/admin/AdminProjectDetail'
 
 function App() {
   return (
     <Routes>
+      <Route path="/admin" element={<AdminRedirect />} />
+      <Route path="/admin/login" element={<AdminLogin />} />
+      <Route path="/admin/users" element={<AdminUsers />} />
+      <Route path="/admin/project-inquiries" element={<AdminProjectInquiries />} />
+      <Route path="/admin/projects" element={<AdminProjects />} />
+      <Route path="/admin/projects/:projectId" element={<AdminProjectDetail />} />
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
