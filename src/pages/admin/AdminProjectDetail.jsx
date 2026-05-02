@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
+import { Link, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import { PROJECT_STATUSES, getProjectById, updateProject } from './adminProjectData'
 
@@ -33,6 +33,9 @@ function getFileType(fileName) {
 function AdminProjectDetail() {
   const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
   const { projectId } = useParams()
+  const navigate = useNavigate()
+  const location = useLocation()
+  const backPath = location.state?.from || '/admin/projects'
   const [project, setProject] = useState(() => getProjectById(projectId))
   const [newFieldName, setNewFieldName] = useState('')
   const [draftNotes, setDraftNotes] = useState(project?.notes || '')
@@ -154,10 +157,14 @@ function AdminProjectDetail() {
       subtitle="Manage project details, documents, notes, and filing progress."
     >
       <div className="admin-detail-page-actions">
-        <Link className="admin-link-button secondary" to="/admin/projects">
+        <button
+          className="admin-link-button secondary"
+          onClick={() => navigate(backPath)}
+          type="button"
+        >
           <i className="fa-solid fa-arrow-left" aria-hidden="true"></i>
-          Back to Projects
-        </Link>
+          Back
+        </button>
         <span className={`admin-project-status ${getStatusClass(project.status)}`}>
           {project.status}
         </span>
@@ -168,32 +175,31 @@ function AdminProjectDetail() {
           <h2>Project Workflow</h2>
           <span>{PROJECT_STATUSES.indexOf(project.status) + 1} of {PROJECT_STATUSES.length} stages completed</span>
         </header>
-        <div className="admin-workflow-list">
+        <div className="admin-stepper">
           {PROJECT_STATUSES.map((status, index) => {
             const currentStatusIndex = PROJECT_STATUSES.indexOf(project.status)
-            const isPast = index < currentStatusIndex
+            const isCompleted = index < currentStatusIndex
             const isCurrent = index === currentStatusIndex
-            const isFuture = index > currentStatusIndex
-            const isClickable = index >= currentStatusIndex
 
-            let chipClass = 'admin-workflow-chip'
-            if (isPast) chipClass += ' completed'
-            if (isCurrent) chipClass += ' current'
-            if (!isClickable) chipClass += ' disabled'
+            let stepClass = 'admin-step'
+            if (isCompleted) stepClass += ' completed'
+            if (isCurrent) stepClass += ' active'
 
             return (
-              <button
-                className={chipClass}
-                disabled={!isClickable}
-                key={status}
-                onClick={() => isClickable && changeStatus(status)}
-                type="button"
-              >
-                <span className="admin-workflow-step">
-                  {isPast ? <i className="fa-solid fa-check" aria-hidden="true"></i> : index + 1}
-                </span>
-                {status}
-              </button>
+              <div key={status} className={stepClass}>
+                <div className="admin-step-content">
+                  <button
+                    className="admin-step-circle"
+                    onClick={() => changeStatus(status)}
+                    title={`Update stage to: ${status}`}
+                    type="button"
+                  >
+                    {isCompleted ? <i className="fa-solid fa-check" aria-hidden="true"></i> : index + 1}
+                  </button>
+                  <span className="admin-step-label">{status}</span>
+                </div>
+                {index < PROJECT_STATUSES.length - 1 && <div className="admin-step-line"></div>}
+              </div>
             )
           })}
         </div>

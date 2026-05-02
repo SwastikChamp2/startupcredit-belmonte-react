@@ -6,6 +6,33 @@ function Contact() {
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    const formData = new FormData(e.target)
+    const contactInquiry = {
+      id: `contact-${Date.now()}`,
+      name: String(formData.get('fullname') || '').trim(),
+      email: String(formData.get('email') || '').trim(),
+      subject: String(formData.get('subject') || '').trim(),
+      message: String(formData.get('message') || '').trim(),
+      submittedAt: new Date().toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+    }
+    let savedInquiries = []
+
+    try {
+      savedInquiries = JSON.parse(localStorage.getItem('startupCreditContactInquiries') || '[]')
+    } catch {
+      savedInquiries = []
+    }
+
+    localStorage.setItem(
+      'startupCreditContactInquiries',
+      JSON.stringify([contactInquiry, ...savedInquiries]),
+    )
     setMsg('Your message has been sent successfully!')
     e.target.reset()
     setTimeout(() => setMsg(''), 5000)
