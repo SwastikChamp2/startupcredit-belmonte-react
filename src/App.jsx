@@ -29,6 +29,8 @@ import AdminServiceManagement from './pages/admin/AdminServiceManagement'
 import AdminServiceDetail from './pages/admin/AdminServiceDetail'
 import AdminGovernmentSchemeManagement from './pages/admin/AdminGovernmentSchemeManagement'
 import AdminGovernmentSchemeDetail from './pages/admin/AdminGovernmentSchemeDetail'
+import AdminServiceView from './pages/admin/AdminServiceView'
+import AdminGovernmentSchemeView from './pages/admin/AdminGovernmentSchemeView'
 
 function App() {
   return (
@@ -47,8 +49,10 @@ function App() {
       <Route path="/admin/contact-us" element={<AdminContactManagement />} />
       <Route path="/admin/services" element={<AdminServiceManagement />} />
       <Route path="/admin/services/:serviceId" element={<AdminServiceDetail />} />
+      <Route path="/admin/services/:serviceId/view" element={<AdminServiceView />} />
       <Route path="/admin/government-schemes" element={<AdminGovernmentSchemeManagement />} />
       <Route path="/admin/government-schemes/:schemeId" element={<AdminGovernmentSchemeDetail />} />
+      <Route path="/admin/government-schemes/:schemeId/view" element={<AdminGovernmentSchemeView />} />
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />

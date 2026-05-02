@@ -178,12 +178,6 @@ function AdminServiceManagement() {
                             type="button"
                             onClick={() => navigate(`/admin/services/${service.id}`)}
                           >
-                            View
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={() => navigate(`/admin/services/${service.id}`)}
-                          >
                             Edit
                           </button>
                           <div style={{ position: 'relative' }}>

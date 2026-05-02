@@ -208,12 +208,6 @@ function AdminGovernmentSchemeManagement() {
                             type="button"
                             onClick={() => navigate(`/admin/government-schemes/${scheme.id}`)}
                           >
-                            View
-                          </button>
-                          <button 
-                            type="button"
-                            onClick={() => navigate(`/admin/government-schemes/${scheme.id}`)}
-                          >
                             Edit
                           </button>
                           <div style={{ position: 'relative' }}>
