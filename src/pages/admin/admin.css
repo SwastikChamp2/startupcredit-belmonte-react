@@ -1329,6 +1329,44 @@
   font-size: 14px;
 }
 
+.admin-pagination-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.admin-page-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+  color: #5f6d83;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.admin-page-size select {
+  height: 34px;
+  border: 1px solid #d7e0ec;
+  border-radius: 7px;
+  padding: 0 10px;
+  color: #34415a;
+  background: #ffffff;
+  font-weight: 700;
+}
+
+.admin-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.admin-confirm-modal {
+  width: min(100%, 480px);
+}
+
 /* Workflow Styles */
 .admin-workflow-card {
   margin-bottom: 24px;

@@ -1,10 +1,13 @@
 import { useMemo, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
-import { getAssociateFullName, getBusinessAssociates } from './mockBusinessAssociates'
+import AdminPagination from './AdminPagination'
+import useAdminPagination from './useAdminPagination'
+import { getAssociateFullName, getBusinessAssociates, updateBusinessAssociate } from './mockBusinessAssociates'
 import './admin.css'
 
 const ASSOCIATE_TABS = ['All Inquiries', 'Verified Associates']
+const ASSOCIATE_STATUSES = ['Inquiry Submitted', 'Verification In progress', 'Verified']
 
 function getStatusClass(status) {
   if (status === 'Verified') return 'accepted'
@@ -18,14 +21,25 @@ function AdminBusinessAssociates() {
   const [activeTab, setActiveTab] = useState('All Inquiries')
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('All Status')
-  const [associates] = useState(() => getBusinessAssociates())
+  const [associates, setAssociates] = useState(() => getBusinessAssociates())
+  const [sortOrder, setSortOrder] = useState('desc')
+
+  const parseDate = (dateStr) => {
+    if (!dateStr || dateStr === 'Today' || dateStr === '-') return Number.MAX_SAFE_INTEGER
+    return new Date(dateStr).getTime()
+  }
+
+  const handleStatusChange = (associateId, newStatus) => {
+    updateBusinessAssociate(associateId, (assoc) => ({ ...assoc, status: newStatus }))
+    setAssociates(getBusinessAssociates())
+  }
 
   const verifiedCount = associates.filter((associate) => associate.status === 'Verified').length
 
   const filteredAssociates = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
 
-    return associates.filter((associate) => {
+    const filtered = associates.filter((associate) => {
       const fullName = getAssociateFullName(associate)
       const matchesTab =
         activeTab === 'All Inquiries' ||
@@ -41,7 +55,14 @@ function AdminBusinessAssociates() {
 
       return matchesTab && matchesSearch && matchesStatus
     })
-  }, [activeTab, associates, searchTerm, statusFilter])
+
+    return filtered.sort((a, b) => {
+      const timeA = parseDate(a.appliedOn)
+      const timeB = parseDate(b.appliedOn)
+      return sortOrder === 'desc' ? timeB - timeA : timeA - timeB
+    })
+  }, [activeTab, associates, searchTerm, statusFilter, sortOrder])
+  const associatesPagination = useAdminPagination(filteredAssociates)
 
   if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />
@@ -101,12 +122,22 @@ function AdminBusinessAssociates() {
                 <th>Email</th>
                 <th>Mobile</th>
                 <th>Status</th>
-                <th>Applied On</th>
+                <th>
+                  Applied On{' '}
+                  <button
+                    onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px' }}
+                    aria-label="Toggle sort order"
+                    type="button"
+                  >
+                    <i className={`fa-solid fa-arrow-${sortOrder === 'desc' ? 'down' : 'up'}`} aria-hidden="true" style={{ color: 'var(--text-light)' }}></i>
+                  </button>
+                </th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {filteredAssociates.map((associate) => {
+              {associatesPagination.paginatedItems.map((associate) => {
                 const fullName = getAssociateFullName(associate)
 
                 return (
@@ -123,9 +154,16 @@ function AdminBusinessAssociates() {
                     <td>{associate.email}</td>
                     <td>{associate.mobile}</td>
                     <td>
-                      <span className={`admin-investor-status ${getStatusClass(associate.status)}`}>
-                        {associate.status}
-                      </span>
+                      <select
+                        className={`admin-investor-status ${getStatusClass(associate.status)}`}
+                        value={associate.status}
+                        onChange={(e) => handleStatusChange(associate.id, e.target.value)}
+                        style={{ border: 'none', cursor: 'pointer', appearance: 'auto' }}
+                      >
+                        {ASSOCIATE_STATUSES.map(status => (
+                          <option key={status} value={status}>{status}</option>
+                        ))}
+                      </select>
                     </td>
                     <td>{associate.appliedOn}</td>
                     <td>
@@ -153,9 +191,11 @@ function AdminBusinessAssociates() {
           )}
         </div>
 
-        <footer className="admin-users-footer">
-          Showing {filteredAssociates.length} of {associates.length} associates
-        </footer>
+        <AdminPagination
+          {...associatesPagination}
+          itemLabel="associates"
+          totalRecords={associates.length}
+        />
       </section>
     </AdminShell>
   )

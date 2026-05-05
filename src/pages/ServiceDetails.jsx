@@ -8,11 +8,6 @@ function ServiceDetails() {
   const schemeId = searchParams.get('scheme') || 'invoice-financing'
   const scheme = schemesData[schemeId]
 
-  useEffect(() => {
-    if (scheme) {
-      document.title = scheme.page_title
-    }
-  }, [scheme])
 
   if (!scheme) {
     return (

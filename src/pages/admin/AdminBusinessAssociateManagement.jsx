@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
+import AdminPagination from './AdminPagination'
+import useAdminPagination from './useAdminPagination'
 import { getAssociateFullName, getBusinessAssociates } from './mockBusinessAssociates'
 import './admin.css'
 
@@ -171,6 +173,7 @@ function AdminBusinessAssociateManagement() {
       })
       .filter((row) => row.isVisible)
   }, [searchTerm, sectorFilter, statusFilter, verifiedAssociates])
+  const associatesPagination = useAdminPagination(associateRows)
 
   const allProjects = verifiedAssociates.flatMap((associate) => getAssociateProjects(associate.email))
   const projectsCompleted = allProjects.filter((project) => project.status === 'Project Completed').length
@@ -280,7 +283,7 @@ function AdminBusinessAssociateManagement() {
               </tr>
             </thead>
             <tbody>
-              {associateRows.map((row) => {
+              {associatesPagination.paginatedItems.map((row) => {
                 const isExpanded = expandedAssociateId === row.associate.id
 
                 return (
@@ -356,8 +359,7 @@ function AdminBusinessAssociateManagement() {
                                 <button
                                   aria-label={`View ${project.projectTitle}`}
                                   className="admin-ba-icon-action"
-                                  disabled={!project.id.startsWith('project-')}
-                                  onClick={() => project.id.startsWith('project-') && navigate(`/admin/projects/${project.id}`, { state: { from: '/admin/business-associate-management' } })}
+                                  onClick={() => navigate(`/admin/projects/${project.id}`, { state: { from: '/admin/business-associate-management' } })}
                                   type="button"
                                 >
                                   <i className="fa-regular fa-eye" aria-hidden="true"></i>
@@ -383,9 +385,11 @@ function AdminBusinessAssociateManagement() {
           )}
         </div>
 
-        <footer className="admin-users-footer">
-          Showing {associateRows.length} of {verifiedAssociates.length} verified associates
-        </footer>
+        <AdminPagination
+          {...associatesPagination}
+          itemLabel="verified associates"
+          totalRecords={verifiedAssociates.length}
+        />
       </section>
     </AdminShell>
   )

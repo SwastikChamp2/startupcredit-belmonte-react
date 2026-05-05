@@ -48,7 +48,20 @@ function AdminServiceDetail() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    setFormData(prev => {
+      const updates = { [name]: value }
+      
+      if (name === 'name') {
+        updates.slug = value
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, '') // remove special chars
+          .replace(/\s+/g, ' ')        // replace multiple spaces with single space
+          .trim()                      // remove leading/trailing spaces
+          .replace(/\s/g, '-')         // replace spaces with hyphens
+      }
+
+      return { ...prev, ...updates }
+    })
   }
 
   const handleHighlightChange = (index, value) => {
@@ -91,7 +104,6 @@ function AdminServiceDetail() {
         <header className="admin-service-detail-header">
           <div className="admin-service-title-info">
             <h2>{formData.name || 'New Service'}</h2>
-            <span className={`status-badge ${formData.status.toLowerCase()}`}>{formData.status}</span>
           </div>
           <div className="admin-service-detail-tabs">
             {['Overview', 'Content', 'Images', 'SEO', 'Settings'].map(tab => (
@@ -203,29 +215,22 @@ function AdminServiceDetail() {
                       <span>No image selected</span>
                     </div>
                   )}
-                  <button className="change-image-btn">Change Image</button>
+                  <label className="change-image-btn" style={{ marginTop: '1rem', display: 'inline-block' }}>
+                    {formData.image ? 'Change Image' : 'Add Image'}
+                    <input 
+                      type="file" 
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          const imageUrl = URL.createObjectURL(file);
+                          setFormData(prev => ({ ...prev, image: imageUrl }));
+                        }
+                      }}
+                    />
+                  </label>
                   <p className="image-hint">Recommended size: 1200x675px</p>
-                </div>
-              </div>
-
-              <div className="admin-form-section">
-                <h3>Publish Settings</h3>
-                <div className="admin-form-group">
-                  <label>Published On</label>
-                  <input 
-                    type="date"
-                    name="publishedOn"
-                    value={formData.publishedOn}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div className="admin-form-group">
-                  <label>Visibility</label>
-                  <select name="visibility" value={formData.visibility} onChange={handleInputChange}>
-                    <option value="Public">Public</option>
-                    <option value="Private">Private</option>
-                    <option value="Password Protected">Password Protected</option>
-                  </select>
                 </div>
               </div>
             </div>

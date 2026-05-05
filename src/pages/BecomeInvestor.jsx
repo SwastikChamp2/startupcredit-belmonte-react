@@ -223,6 +223,22 @@ function BecomeInvestor() {
                       </div>
                     </div>
 
+                    {/* Contact Details */}
+                    <div className="form-group row">
+                      <div className="col-md-6">
+                        <div className="form-item">
+                          <input type="email" name="email" className="form-control" placeholder="Email Address *" required />
+                          <div className="icon"><i className="fas fa-envelope" /></div>
+                        </div>
+                      </div>
+                      <div className="col-md-6">
+                        <div className="form-item">
+                          <input type="tel" name="phone" className="form-control" placeholder="Phone Number *" required />
+                          <div className="icon"><i className="fas fa-phone" /></div>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Type of Entity - Only for Organisation */}
                     {isOrg && (
                       <div className="form-group row">

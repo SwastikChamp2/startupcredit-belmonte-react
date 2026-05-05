@@ -55,7 +55,20 @@ function AdminGovernmentSchemeDetail() {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
-    setFormData(prev => ({ ...prev, [name]: value }))
+    setFormData(prev => {
+      const updates = { [name]: value }
+      
+      if (name === 'name') {
+        updates.slug = value
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, '') // remove special chars
+          .replace(/\s+/g, ' ')        // replace multiple spaces with single space
+          .trim()                      // remove leading/trailing spaces
+          .replace(/\s/g, '-')         // replace spaces with hyphens
+      }
+
+      return { ...prev, ...updates }
+    })
   }
 
   const handleMultiSelect = (category) => {
@@ -106,10 +119,9 @@ function AdminGovernmentSchemeDetail() {
         <header className="admin-service-detail-header">
           <div className="admin-service-title-info">
             <h2>{formData.name || 'New Scheme'}</h2>
-            <span className={`status-badge ${formData.status.toLowerCase()}`}>{formData.status}</span>
           </div>
           <div className="admin-service-detail-tabs">
-            {['Overview', 'Content', 'Eligibility', 'Documents', 'SEO', 'Settings'].map(tab => (
+            {['Overview', 'Ministry', 'Content', 'Eligibility', 'Documents', 'SEO', 'Settings'].map(tab => (
               <button 
                 key={tab}
                 className={activeTab === tab ? 'active' : ''}
@@ -139,12 +151,6 @@ function AdminGovernmentSchemeDetail() {
                   <input name="slug" value={formData.slug} onChange={handleInputChange} placeholder="pmegp-scheme" />
                 </div>
                 <div className="admin-form-row">
-                  <div className="admin-form-group">
-                    <label>Ministry *</label>
-                    <select name="ministry" value={formData.ministry} onChange={handleInputChange}>
-                      {MINISTRIES.map(min => <option key={min} value={min}>{min}</option>)}
-                    </select>
-                  </div>
                   <div className="admin-form-group">
                     <label>Status *</label>
                     <select name="status" value={formData.status} onChange={handleInputChange}>
@@ -180,11 +186,6 @@ function AdminGovernmentSchemeDetail() {
 
 
                 <div className="admin-form-section">
-                  <h3>Display Order</h3>
-                  <input type="number" name="order" value={formData.order} onChange={handleInputChange} />
-                </div>
-
-                <div className="admin-form-section">
                   <h3>Key Benefits (Highlights)</h3>
                   <div className="highlights-list">
                     {formData.highlights.map((h, i) => (
@@ -208,6 +209,24 @@ function AdminGovernmentSchemeDetail() {
                     ))}
                     <button className="add-highlight-btn" onClick={() => addListItem('tags')}>+ Add Tag</button>
                   </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'Ministry' && (
+            <div className="admin-service-content-editor">
+              <div className="admin-form-section">
+                <h3>Ministry Information</h3>
+                <div className="admin-form-group">
+                  <label>Ministry Name</label>
+                  <input 
+                    name="ministry" 
+                    value={formData.ministry} 
+                    onChange={handleInputChange} 
+                    placeholder="e.g. Ministry of Micro, Small and Medium Enterprises" 
+                  />
+                  <p className="image-hint mt-2">Enter the full name of the governing ministry or department.</p>
                 </div>
               </div>
             </div>

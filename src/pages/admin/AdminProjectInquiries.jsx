@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
+import AdminPagination from './AdminPagination'
+import useAdminPagination from './useAdminPagination'
 
 const PROJECT_INQUIRIES_STORAGE_KEY = 'startupCreditProjectInquiries'
 
@@ -137,6 +139,7 @@ function AdminProjectInquiries() {
       return matchesStatus && matchesSource && matchesSearch
     })
   }, [inquiries, searchTerm, sourceFilter, statusFilter])
+  const inquiriesPagination = useAdminPagination(filteredInquiries)
 
   if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />
@@ -206,7 +209,7 @@ function AdminProjectInquiries() {
               </tr>
             </thead>
             <tbody>
-              {filteredInquiries.map((inquiry) => (
+              {inquiriesPagination.paginatedItems.map((inquiry) => (
                 <tr key={inquiry.id}>
                   <td>
                     <div className="admin-project-cell">
@@ -267,9 +270,11 @@ function AdminProjectInquiries() {
           )}
         </div>
 
-        <footer className="admin-users-footer">
-          Showing {filteredInquiries.length} of {inquiries.length} inquiries
-        </footer>
+        <AdminPagination
+          {...inquiriesPagination}
+          itemLabel="inquiries"
+          totalRecords={inquiries.length}
+        />
       </section>
 
       {selectedInquiry && (

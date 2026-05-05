@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import AdminShell from './AdminShell'
+import AdminPagination from './AdminPagination'
+import useAdminPagination from './useAdminPagination'
 import { mockInvestors } from './mockInvestors'
 import './admin.css'
 
@@ -19,10 +21,13 @@ function AdminInvestorDetail() {
   const navigate = useNavigate()
   const initialInvestor = mockInvestors.find((investor) => investor.id === investorId)
   const [investor, setInvestor] = useState(initialInvestor)
+  const [draftInvestor, setDraftInvestor] = useState(initialInvestor)
+  const [editingCard, setEditingCard] = useState(null)
   const [activeTab, setActiveTab] = useState('Investor Details')
   const [notes, setNotes] = useState(initialInvestor?.notes || '')
   const [isEditingNotes, setIsEditingNotes] = useState(false)
   const [documents, setDocuments] = useState(initialInvestor?.documents || [])
+  const documentsPagination = useAdminPagination(documents)
 
   if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />
@@ -67,6 +72,19 @@ function AdminInvestorDetail() {
     }
   }
 
+  const saveEdits = () => {
+    // Update the local state and draft state
+    setInvestor(draftInvestor)
+    
+    // Update central mock data
+    const centralInvestor = mockInvestors.find((i) => i.id === investorId)
+    if (centralInvestor) {
+      Object.assign(centralInvestor, draftInvestor)
+    }
+    
+    setEditingCard(null)
+  }
+
   const addFile = (event) => {
     const file = event.target.files[0]
 
@@ -103,7 +121,7 @@ function AdminInvestorDetail() {
   }
 
   return (
-    <AdminShell title={investor.name} subtitle={investor.company}>
+    <AdminShell title={investor.name} subtitle={investor.investorType}>
       <div className="admin-detail-page-actions">
         <button
           className="admin-link-button secondary"
@@ -124,7 +142,7 @@ function AdminInvestorDetail() {
             <span>{investor.avatar}</span>
             <div>
               <h2>{investor.name}</h2>
-              <p>{investor.company}</p>
+              <p>{investor.investorType}</p>
             </div>
           </div>
 
@@ -167,66 +185,91 @@ function AdminInvestorDetail() {
           {activeTab === 'Investor Details' && (
             <>
               <article className="admin-detail-card admin-bordered-card">
-                <header className="admin-section-header">
-                  <h2>Basic Information</h2>
+                <header className="admin-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <h2 style={{ margin: 0 }}>Investor Information</h2>
+                  {editingCard === 'investorInfo' ? (
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button className="admin-link-button secondary" onClick={() => { setDraftInvestor(investor); setEditingCard(null); }} type="button" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}>Cancel</button>
+                      <button className="admin-link-button" onClick={saveEdits} type="button" style={{ padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}>Save</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setEditingCard('investorInfo')} type="button" style={{ background: 'none', border: 'none', color: 'var(--text-light)', cursor: 'pointer', padding: '0.25rem' }} title="Edit Investor Information">
+                      <i className="fa-solid fa-pencil" aria-hidden="true"></i>
+                    </button>
+                  )}
                 </header>
                 <div className="admin-detail-grid project-info-grid">
                   <div>
-                    <span>Full Name</span>
-                    <strong>{investor.name}</strong>
+                    <span>Nature of Investor</span>
+                    {editingCard === 'investorInfo' ? (
+                      <select value={draftInvestor.investorType} onChange={(e) => setDraftInvestor({ ...draftInvestor, investorType: e.target.value })} style={{ padding: '0.2rem', width: '100%', fontSize: '0.9rem', border: '1px solid var(--border)', borderRadius: '4px' }}>
+                        <option value="Individual">Individual</option>
+                        <option value="Organisation">Organisation</option>
+                      </select>
+                    ) : (
+                      <strong>{investor.investorType}</strong>
+                    )}
                   </div>
                   <div>
-                    <span>Company Name</span>
-                    <strong>{investor.company}</strong>
+                    <span>Name of Investor</span>
+                    {editingCard === 'investorInfo' ? (
+                      <input type="text" value={draftInvestor.name} onChange={(e) => setDraftInvestor({ ...draftInvestor, name: e.target.value })} style={{ padding: '0.2rem', width: '100%', fontSize: '0.9rem', border: '1px solid var(--border)', borderRadius: '4px' }} />
+                    ) : (
+                      <strong>{investor.name}</strong>
+                    )}
+                  </div>
+                  {((editingCard === 'investorInfo' && draftInvestor.investorType === 'Organisation') || (editingCard !== 'investorInfo' && investor.investorType === 'Organisation')) && (
+                    <div>
+                      <span>Type of Entity</span>
+                      {editingCard === 'investorInfo' ? (
+                        <input type="text" value={draftInvestor.entityType || ''} onChange={(e) => setDraftInvestor({ ...draftInvestor, entityType: e.target.value })} style={{ padding: '0.2rem', width: '100%', fontSize: '0.9rem', border: '1px solid var(--border)', borderRadius: '4px' }} />
+                      ) : (
+                        <strong>{investor.entityType}</strong>
+                      )}
+                    </div>
+                  )}
+                  <div>
+                    <span>Average Check Size</span>
+                    {editingCard === 'investorInfo' ? (
+                      <input type="text" value={draftInvestor.checkSize} onChange={(e) => setDraftInvestor({ ...draftInvestor, checkSize: e.target.value })} style={{ padding: '0.2rem', width: '100%', fontSize: '0.9rem', border: '1px solid var(--border)', borderRadius: '4px' }} />
+                    ) : (
+                      <strong>{investor.checkSize}</strong>
+                    )}
                   </div>
                   <div>
                     <span>Email</span>
-                    <strong>{investor.email}</strong>
-                  </div>
-                  <div>
-                    <span>Designation</span>
-                    <strong>{investor.designation}</strong>
+                    {editingCard === 'investorInfo' ? (
+                      <input type="email" value={draftInvestor.email} onChange={(e) => setDraftInvestor({ ...draftInvestor, email: e.target.value })} style={{ padding: '0.2rem', width: '100%', fontSize: '0.9rem', border: '1px solid var(--border)', borderRadius: '4px' }} />
+                    ) : (
+                      <strong>{investor.email}</strong>
+                    )}
                   </div>
                   <div>
                     <span>Phone</span>
-                    <strong>{investor.phone}</strong>
+                    {editingCard === 'investorInfo' ? (
+                      <input type="text" value={draftInvestor.phone} onChange={(e) => setDraftInvestor({ ...draftInvestor, phone: e.target.value })} style={{ padding: '0.2rem', width: '100%', fontSize: '0.9rem', border: '1px solid var(--border)', borderRadius: '4px' }} />
+                    ) : (
+                      <strong>{investor.phone}</strong>
+                    )}
                   </div>
                   <div>
                     <span>PAN Number</span>
-                    <strong>{investor.pan}</strong>
+                    {editingCard === 'investorInfo' ? (
+                      <input type="text" value={draftInvestor.pan || ''} onChange={(e) => setDraftInvestor({ ...draftInvestor, pan: e.target.value })} style={{ padding: '0.2rem', width: '100%', fontSize: '0.9rem', border: '1px solid var(--border)', borderRadius: '4px' }} />
+                    ) : (
+                      <strong>{investor.pan}</strong>
+                    )}
                   </div>
-                </div>
-              </article>
-
-              <article className="admin-detail-card admin-bordered-card">
-                <header className="admin-section-header">
-                  <h2>Business Information</h2>
-                </header>
-                <div className="admin-detail-grid project-info-grid">
-                  <div>
-                    <span>Company Type</span>
-                    <strong>{investor.companyType}</strong>
-                  </div>
-                  <div>
-                    <span>Years in Business</span>
-                    <strong>{investor.yearsInBusiness}</strong>
-                  </div>
-                  <div>
-                    <span>Registration Number</span>
-                    <strong>{investor.registrationNumber}</strong>
-                  </div>
-                  <div>
-                    <span>Investing Experience</span>
-                    <strong>{investor.investingExperience}</strong>
-                  </div>
-                  <div>
-                    <span>Website</span>
-                    <strong>{investor.website}</strong>
-                  </div>
-                  <div>
-                    <span>Focus Sectors</span>
-                    <strong>{investor.focusSectors}</strong>
-                  </div>
+                  {((editingCard === 'investorInfo' && draftInvestor.investorType === 'Individual') || (editingCard !== 'investorInfo' && investor.investorType === 'Individual')) && (
+                    <div>
+                      <span>Aadhaar Number</span>
+                      {editingCard === 'investorInfo' ? (
+                        <input type="text" value={draftInvestor.aadhaar || ''} onChange={(e) => setDraftInvestor({ ...draftInvestor, aadhaar: e.target.value })} style={{ padding: '0.2rem', width: '100%', fontSize: '0.9rem', border: '1px solid var(--border)', borderRadius: '4px' }} />
+                      ) : (
+                        <strong>{investor.aadhaar}</strong>
+                      )}
+                    </div>
+                  )}
                 </div>
               </article>
 
@@ -278,7 +321,7 @@ function AdminInvestorDetail() {
                     </tr>
                   </thead>
                   <tbody>
-                    {documents.map((document) => (
+                    {documentsPagination.paginatedItems.map((document) => (
                       <tr key={document.id}>
                         <td>
                           <div className="admin-document-name">
@@ -306,6 +349,11 @@ function AdminInvestorDetail() {
                   </tbody>
                 </table>
               </div>
+              <AdminPagination
+                {...documentsPagination}
+                itemLabel="documents"
+                totalRecords={documents.length}
+              />
             </article>
           )}
 

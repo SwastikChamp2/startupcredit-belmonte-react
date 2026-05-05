@@ -15,11 +15,6 @@ function GovernmentSchemeDetail() {
     ? category.schemes.filter((entry) => entry.id !== scheme.id).slice(0, 3)
     : []
 
-  useEffect(() => {
-    if (scheme) {
-      document.title = `${scheme.name} | Government Scheme Detail`
-    }
-  }, [scheme])
 
   if (!scheme || !category) {
     return (

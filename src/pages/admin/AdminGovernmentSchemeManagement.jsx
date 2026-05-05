@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
+import AdminPagination from './AdminPagination'
+import useAdminPagination from './useAdminPagination'
 import { mockGovernmentSchemes, GOVT_SCHEME_CATEGORIES, MINISTRIES } from './mockGovernmentSchemes'
 import './admin.css'
 
@@ -9,13 +11,12 @@ function AdminGovernmentSchemeManagement() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('All Schemes')
   const [searchTerm, setSearchTerm] = useState('')
-  const [categoryFilter, setCategoryFilter] = useState('All Categories')
   const [statusFilter, setStatusFilter] = useState('All Status')
   const [ministryFilter, setMinistryFilter] = useState('All Ministries')
   
   const [schemes, setSchemes] = useState(mockGovernmentSchemes)
-  const [categories, setCategories] = useState(GOVT_SCHEME_CATEGORIES)
-  const [newCategory, setNewCategory] = useState('')
+  const [ministriesList, setMinistriesList] = useState(MINISTRIES)
+  const [newMinistry, setNewMinistry] = useState('')
   const [openMenuId, setOpenMenuId] = useState(null)
   const [schemeToDelete, setSchemeToDelete] = useState(null)
 
@@ -44,31 +45,29 @@ function AdminGovernmentSchemeManagement() {
         scheme.slug.toLowerCase().includes(query) ||
         (scheme.fullTitle && scheme.fullTitle.toLowerCase().includes(query))
       
-      const matchesCategory = categoryFilter === 'All Categories' || 
-        (scheme.categories && scheme.categories.includes(categoryFilter))
-      
       const matchesStatus = statusFilter === 'All Status' || scheme.status === statusFilter
       
       const matchesMinistry = ministryFilter === 'All Ministries' || scheme.ministry === ministryFilter
       
-      return matchesSearch && matchesCategory && matchesStatus && matchesMinistry
+      return matchesSearch && matchesStatus && matchesMinistry
     })
-  }, [schemes, searchTerm, categoryFilter, statusFilter, ministryFilter])
+  }, [schemes, searchTerm, statusFilter, ministryFilter])
+  const schemesPagination = useAdminPagination(filteredSchemes)
 
   if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />
   }
 
-  const handleAddCategory = (e) => {
+  const handleAddMinistry = (e) => {
     e.preventDefault()
-    if (newCategory.trim() && !categories.includes(newCategory.trim())) {
-      setCategories([...categories, newCategory.trim()])
-      setNewCategory('')
+    if (newMinistry.trim() && !ministriesList.includes(newMinistry.trim())) {
+      setMinistriesList([...ministriesList, newMinistry.trim()])
+      setNewMinistry('')
     }
   }
 
-  const handleDeleteCategory = (catToDelete) => {
-    setCategories(categories.filter(c => c !== catToDelete))
+  const handleDeleteMinistry = (minToDelete) => {
+    setMinistriesList(ministriesList.filter(m => m !== minToDelete))
   }
 
   return (
@@ -87,11 +86,11 @@ function AdminGovernmentSchemeManagement() {
               All Schemes ({schemes.length})
             </button>
             <button
-              className={activeTab === 'Categories' ? 'active' : ''}
-              onClick={() => setActiveTab('Categories')}
+              className={activeTab === 'Ministries' ? 'active' : ''}
+              onClick={() => setActiveTab('Ministries')}
               type="button"
             >
-              Categories ({categories.length})
+              Ministries ({ministriesList.length})
             </button>
           </div>
         </div>
@@ -110,16 +109,7 @@ function AdminGovernmentSchemeManagement() {
                   />
                 </label>
 
-                <select
-                  className="admin-filter-select"
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                >
-                  <option value="All Categories">All Categories</option>
-                  {categories.map(cat => (
-                    <option key={cat} value={cat}>{cat}</option>
-                  ))}
-                </select>
+
 
                 <select
                   className="admin-filter-select"
@@ -137,7 +127,7 @@ function AdminGovernmentSchemeManagement() {
                   onChange={(e) => setMinistryFilter(e.target.value)}
                 >
                   <option value="All Ministries">All Ministries</option>
-                  {MINISTRIES.map(min => (
+                  {ministriesList.map(min => (
                     <option key={min} value={min}>{min}</option>
                   ))}
                 </select>
@@ -165,7 +155,6 @@ function AdminGovernmentSchemeManagement() {
                 <thead>
                   <tr>
                     <th>Scheme Name</th>
-                    <th>Categories</th>
                     <th>Ministry</th>
                     <th>Status</th>
                     <th>Last Updated</th>
@@ -173,7 +162,7 @@ function AdminGovernmentSchemeManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredSchemes.map((scheme) => (
+                  {schemesPagination.paginatedItems.map((scheme) => (
                     <tr key={scheme.id}>
                       <td>
                         <div className="admin-service-cell-info">
@@ -183,16 +172,7 @@ function AdminGovernmentSchemeManagement() {
                           </div>
                         </div>
                       </td>
-                      <td>
-                        <div className="admin-cat-badges-list">
-                          {scheme.categories?.slice(0, 2).map(cat => (
-                            <span key={cat} className="admin-service-cat-badge">{cat}</span>
-                          ))}
-                          {scheme.categories?.length > 2 && (
-                            <span className="admin-cat-more">+{scheme.categories.length - 2}</span>
-                          )}
-                        </div>
-                      </td>
+
                       <td>
                         <span className="admin-ministry-text">{scheme.ministry || 'N/A'}</span>
                       </td>
@@ -260,34 +240,39 @@ function AdminGovernmentSchemeManagement() {
               </table>
             </div>
 
+            <AdminPagination
+              {...schemesPagination}
+              itemLabel="schemes"
+              totalRecords={schemes.length}
+            />
 
           </>
         ) : (
           <div className="admin-categories-view">
             <div className="admin-category-add-form">
-              <h3>Add New Category</h3>
-              <form onSubmit={handleAddCategory}>
+              <h3>Add New Ministry</h3>
+              <form onSubmit={handleAddMinistry}>
                 <input 
                   type="text" 
-                  placeholder="Enter category name..." 
-                  value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value)}
+                  placeholder="Enter ministry name..." 
+                  value={newMinistry}
+                  onChange={(e) => setNewMinistry(e.target.value)}
                 />
-                <button type="submit" className="admin-add-service-btn">Add Category</button>
+                <button type="submit" className="admin-add-service-btn">Add Ministry</button>
               </form>
             </div>
 
             <div className="admin-category-list">
-              <h3>Existing Categories</h3>
+              <h3>Existing Ministries</h3>
               <div className="admin-category-grid">
-                {categories.map((cat) => (
-                  <div key={cat} className="admin-category-item">
-                    <span>{cat}</span>
+                {ministriesList.map((min) => (
+                  <div key={min} className="admin-category-item">
+                    <span>{min}</span>
                     <div className="admin-category-actions">
                       <button className="admin-edit-btn"><i className="fa-solid fa-pencil"></i></button>
                       <button 
                         className="admin-delete-btn"
-                        onClick={() => handleDeleteCategory(cat)}
+                        onClick={() => handleDeleteMinistry(min)}
                       >
                         <i className="fa-solid fa-trash"></i>
                       </button>

@@ -1,6 +1,8 @@
 import { useState, useMemo } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
+import AdminPagination from './AdminPagination'
+import useAdminPagination from './useAdminPagination'
 import { mockServices, SERVICE_CATEGORIES } from './mockServices'
 import './admin.css'
 
@@ -43,6 +45,7 @@ function AdminServiceManagement() {
       return matchesSearch && matchesCategory && matchesStatus
     })
   }, [services, searchTerm, categoryFilter, statusFilter])
+  const servicesPagination = useAdminPagination(filteredServices)
 
   if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />
@@ -151,7 +154,7 @@ function AdminServiceManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredServices.map((service) => (
+                  {servicesPagination.paginatedItems.map((service) => (
                     <tr key={service.id}>
                       <td>
                         <div className="admin-service-cell-info">
@@ -230,6 +233,11 @@ function AdminServiceManagement() {
               </table>
             </div>
 
+            <AdminPagination
+              {...servicesPagination}
+              itemLabel="services"
+              totalRecords={services.length}
+            />
 
           </>
         ) : (

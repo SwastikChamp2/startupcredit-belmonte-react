@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
+import AdminPagination from './AdminPagination'
+import useAdminPagination from './useAdminPagination'
 
 const DUMMY_USERS = [
   {
@@ -65,6 +67,7 @@ function AdminUsers() {
         user.email.toLowerCase().includes(query),
     )
   }, [searchTerm, statusFilter, users])
+  const usersPagination = useAdminPagination(filteredUsers)
 
   const activeUsers = users.filter((user) => user.status === 'Active').length
   const disabledUsers = users.filter((user) => user.status === 'Disabled').length
@@ -140,7 +143,7 @@ function AdminUsers() {
               </tr>
             </thead>
             <tbody>
-              {filteredUsers.map((user) => (
+              {usersPagination.paginatedItems.map((user) => (
                 <tr key={user.id}>
                   <td>
                     <div className="admin-user-name">
@@ -187,9 +190,11 @@ function AdminUsers() {
           )}
         </div>
 
-        <footer className="admin-users-footer">
-          Showing {filteredUsers.length} of {users.length} users
-        </footer>
+        <AdminPagination
+          {...usersPagination}
+          itemLabel="users"
+          totalRecords={users.length}
+        />
       </section>
     </AdminShell>
   )

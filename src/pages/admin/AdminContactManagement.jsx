@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { Navigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
+import AdminPagination from './AdminPagination'
+import useAdminPagination from './useAdminPagination'
 import './admin.css'
 
 const CONTACT_INQUIRIES_STORAGE_KEY = 'startupCreditContactInquiries'
@@ -10,6 +12,7 @@ const SEEDED_CONTACT_INQUIRIES = [
     id: 'contact-amit-sharma',
     name: 'Amit Sharma',
     email: 'amit.sharma@example.com',
+    mobile: '+91 98765 43210',
     submittedAt: '12 May 2024, 10:30 AM',
     subject: 'Project funding guidance',
     message: 'I want to understand which government schemes are suitable for my new manufacturing project.',
@@ -18,6 +21,7 @@ const SEEDED_CONTACT_INQUIRIES = [
     id: 'contact-neha-desai',
     name: 'Neha Desai',
     email: 'neha.desai@example.com',
+    mobile: '+91 91234 56789',
     submittedAt: '11 May 2024, 04:15 PM',
     subject: 'Document support',
     message: 'Please share the document checklist required before submitting a project inquiry on Startup Credit.',
@@ -26,6 +30,7 @@ const SEEDED_CONTACT_INQUIRIES = [
     id: 'contact-rajesh-kulkarni',
     name: 'Rajesh Kulkarni',
     email: 'rajesh.kulkarni@example.com',
+    mobile: '+91 99887 66554',
     submittedAt: '10 May 2024, 11:20 AM',
     subject: 'Business associate query',
     message: 'I am interested in becoming a business associate and would like to know the verification process.',
@@ -34,6 +39,7 @@ const SEEDED_CONTACT_INQUIRIES = [
     id: 'contact-priya-menon',
     name: 'Priya Menon',
     email: 'priya.menon@example.com',
+    mobile: '+91 90909 09090',
     submittedAt: '09 May 2024, 09:45 AM',
     subject: 'Investor information',
     message: 'I would like to know how investors can review active startup financing opportunities on your platform.',
@@ -80,6 +86,7 @@ function AdminContactManagement() {
         inquiry.subject.toLowerCase().includes(query),
     )
   }, [inquiries, searchTerm])
+  const inquiriesPagination = useAdminPagination(filteredInquiries)
 
   if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />
@@ -116,7 +123,7 @@ function AdminContactManagement() {
               </tr>
             </thead>
             <tbody>
-              {filteredInquiries.map((inquiry) => (
+              {inquiriesPagination.paginatedItems.map((inquiry) => (
                 <tr key={inquiry.id}>
                   <td>
                     <div className="admin-user-name">
@@ -150,9 +157,11 @@ function AdminContactManagement() {
           )}
         </div>
 
-        <footer className="admin-users-footer">
-          Showing {filteredInquiries.length} of {inquiries.length} contact inquiries
-        </footer>
+        <AdminPagination
+          {...inquiriesPagination}
+          itemLabel="contact inquiries"
+          totalRecords={inquiries.length}
+        />
       </section>
 
       {selectedInquiry && (
@@ -180,6 +189,10 @@ function AdminContactManagement() {
                 <div>
                   <span>Email</span>
                   <strong>{selectedInquiry.email || 'Not provided'}</strong>
+                </div>
+                <div>
+                  <span>Mobile Number</span>
+                  <strong>{selectedInquiry.mobile || 'Not provided'}</strong>
                 </div>
               </div>
               <div className="admin-detail-block">

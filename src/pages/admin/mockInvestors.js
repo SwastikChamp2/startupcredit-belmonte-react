@@ -1,21 +1,17 @@
-export const mockInvestors = [
+const INITIAL_INVESTORS = [
   {
     id: 'INV-001',
-    name: 'Arjun Mehta',
-    company: 'Mehta Capital Advisors',
+    investorType: 'Organisation',
+    name: 'Mehta Capital Advisors',
     email: 'arjun.mehta@example.com',
     phone: '+91 98765 43210',
     status: 'Inquiry Submitted',
     appliedOn: '12 May 2024, 10:30 AM',
-    avatar: 'AM',
-    designation: 'Managing Director',
+    avatar: 'MC',
+    entityType: 'Private Limited',
+    checkSize: '1 - 5 Crores',
+    aadhaar: '-',
     pan: 'AABFK1234K',
-    companyType: 'Private Limited',
-    yearsInBusiness: '8 Years',
-    registrationNumber: 'U65990MH2018PTC123456',
-    investingExperience: '6 Years',
-    website: 'www.mehtacapital.com',
-    focusSectors: 'FinTech, SaaS, Healthcare',
     reviewedOn: '13 May 2024, 02:45 PM',
     reviewedBy: 'Admin User',
     notes: 'Investor seems interested in Series A startups. Documents verified.',
@@ -29,21 +25,17 @@ export const mockInvestors = [
   },
   {
     id: 'INV-002',
-    name: 'Priya Shah',
-    company: 'Shah Investment Group',
+    investorType: 'Organisation',
+    name: 'Shah Investment Group',
     email: 'priya.shah@example.com',
     phone: '+91 91234 56789',
     status: 'Verification In progress',
     appliedOn: '11 May 2024, 04:15 PM',
-    avatar: 'PS',
-    designation: 'Investment Head',
+    avatar: 'SI',
+    entityType: 'Partnership',
+    checkSize: '50 Lakhs - 1 Crore',
+    aadhaar: '-',
     pan: 'BHPKS5678L',
-    companyType: 'Partnership',
-    yearsInBusiness: '5 Years',
-    registrationNumber: 'U72200DL2019PTC234567',
-    investingExperience: '4 Years',
-    website: 'www.shahinvestments.in',
-    focusSectors: 'EdTech, Clean Energy',
     reviewedOn: '-',
     reviewedBy: '-',
     notes: '',
@@ -54,49 +46,39 @@ export const mockInvestors = [
   },
   {
     id: 'INV-003',
+    investorType: 'Individual',
     name: 'Rakesh Kumar',
-    company: 'Kumar Holdings Ltd.',
     email: 'rakesh.kumar@example.com',
     phone: '+91 99887 66554',
     status: 'Verified',
     appliedOn: '10 May 2024, 11:20 AM',
     avatar: 'RK',
-    designation: 'Founder & CEO',
+    entityType: '-',
+    checkSize: '10 - 50 Lakhs',
+    aadhaar: '1234 5678 9012',
     pan: 'CCVPL9012M',
-    companyType: 'Public Limited',
-    yearsInBusiness: '12 Years',
-    registrationNumber: 'U85110KA2012PLC345678',
-    investingExperience: '10 Years',
-    website: 'www.kumarholdings.com',
-    focusSectors: 'Renewable Energy, Manufacturing',
     reviewedOn: '13 May 2024, 02:45 PM',
     reviewedBy: 'Admin User',
     notes: 'All documents verified. Investor is genuine and can be onboarded.',
     documents: [
       { id: 'doc1', name: 'PAN Card', type: 'PDF', uploadedOn: '10 May 2024, 11:25 AM' },
-      { id: 'doc2', name: 'Certificate of Incorporation', type: 'PDF', uploadedOn: '10 May 2024, 11:27 AM' },
-      { id: 'doc3', name: 'Financial Statements (FY 23-24)', type: 'XLSX', uploadedOn: '10 May 2024, 11:30 AM' },
-      { id: 'doc4', name: 'Company Profile', type: 'DOC', uploadedOn: '10 May 2024, 11:32 AM' },
-      { id: 'doc5', name: 'Cancelled Cheque', type: 'JPG', uploadedOn: '10 May 2024, 11:35 AM' }
+      { id: 'doc2', name: 'Aadhaar Card', type: 'PDF', uploadedOn: '10 May 2024, 11:27 AM' },
+      { id: 'doc3', name: 'Cancelled Cheque', type: 'JPG', uploadedOn: '10 May 2024, 11:35 AM' }
     ]
   },
   {
     id: 'INV-004',
-    name: 'Neha Desai',
-    company: 'Desai Ventures',
+    investorType: 'Organisation',
+    name: 'Desai Ventures',
     email: 'neha.desai@example.com',
     phone: '+91 90909 09090',
     status: 'Inquiry Submitted',
     appliedOn: '09 May 2024, 09:45 AM',
-    avatar: 'ND',
-    designation: 'Director',
+    avatar: 'DV',
+    entityType: 'VC Firm',
+    checkSize: '5 - 10 Crores',
+    aadhaar: '-',
     pan: 'DDKPS3456N',
-    companyType: 'Private Limited',
-    yearsInBusiness: '3 Years',
-    registrationNumber: 'U93000GJ2021PTC456789',
-    investingExperience: '2 Years',
-    website: 'www.desaiventures.com',
-    focusSectors: 'Consumer Brands, D2C',
     reviewedOn: '-',
     reviewedBy: '-',
     notes: '',
@@ -106,46 +88,38 @@ export const mockInvestors = [
   },
   {
     id: 'INV-005',
+    investorType: 'Individual',
     name: 'Suresh Modi',
-    company: 'Modi Finance & Invest',
     email: 'suresh.modi@example.com',
     phone: '+91 88001 12233',
     status: 'Verification In progress',
     appliedOn: '08 May 2024, 03:30 PM',
     avatar: 'SM',
-    designation: 'Proprietor',
+    entityType: '-',
+    checkSize: '10 - 50 Lakhs',
+    aadhaar: '9876 5432 1098',
     pan: 'EEVPS7890P',
-    companyType: 'Proprietorship',
-    yearsInBusiness: '15 Years',
-    registrationNumber: 'GSTIN24AAAPM1234F1Z5',
-    investingExperience: '12 Years',
-    website: 'www.modifinance.in',
-    focusSectors: 'Real Estate, Agriculture',
     reviewedOn: '-',
     reviewedBy: '-',
     notes: '',
     documents: [
       { id: 'doc1', name: 'PAN Card', type: 'PDF', uploadedOn: '08 May 2024, 03:45 PM' },
-      { id: 'doc2', name: 'Trade License', type: 'PDF', uploadedOn: '08 May 2024, 03:50 PM' }
+      { id: 'doc2', name: 'Aadhaar Card', type: 'PDF', uploadedOn: '08 May 2024, 03:50 PM' }
     ]
   },
   {
     id: 'INV-006',
-    name: 'Vikram Kapoor',
-    company: 'Kapoor Investments',
+    investorType: 'Organisation',
+    name: 'Kapoor Investments',
     email: 'vikram.kapoor@example.com',
     phone: '+91 77665 44332',
     status: 'Verified',
     appliedOn: '07 May 2024, 02:10 PM',
-    avatar: 'VK',
-    designation: 'CEO',
+    avatar: 'KI',
+    entityType: 'Angel Syndicate',
+    checkSize: '1 - 5 Crores',
+    aadhaar: '-',
     pan: 'FFVPL2345Q',
-    companyType: 'Private Limited',
-    yearsInBusiness: '7 Years',
-    registrationNumber: 'U67190MH2017PTC567890',
-    investingExperience: '5 Years',
-    website: 'www.kapoorinvest.com',
-    focusSectors: 'Logistics, Supply Chain',
     reviewedOn: '12 May 2024, 11:30 AM',
     reviewedBy: 'Admin User',
     notes: 'Solid track record. Onboarding complete.',
@@ -154,4 +128,17 @@ export const mockInvestors = [
       { id: 'doc2', name: 'COI', type: 'PDF', uploadedOn: '07 May 2024, 02:35 PM' }
     ]
   }
-];
+]
+
+let investorStore = [...INITIAL_INVESTORS]
+
+export function getInvestors() {
+  return investorStore
+}
+
+export function updateInvestor(investorId, updater) {
+  investorStore = investorStore.map(inv => inv.id === investorId ? updater(inv) : inv)
+  return investorStore.find(inv => inv.id === investorId)
+}
+
+export const mockInvestors = investorStore;

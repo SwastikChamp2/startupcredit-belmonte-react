@@ -24,6 +24,7 @@ function Header() {
       <li className={pathname === '/select-project' ? 'active' : ''}><Link to="/select-project">SELECT PROJECT</Link></li>
       <li className={pathname === '/business-associate' ? 'active' : ''}><Link to="/business-associate">BUSINESS ASSOCIATE</Link></li>
       <li className={pathname === '/become-investor' ? 'active' : ''}><Link to="/become-investor">BECOME INVESTOR</Link></li>
+      <li className={pathname === '/contact' ? 'active' : ''}><Link to="/contact">CONTACT US</Link></li>
     </ul>
   )
 
@@ -48,7 +49,7 @@ function Header() {
               </div>
               <div className="header-right-wrap">
                 <div className="header-right">
-                  <Link to="/service" className="bz-primary-btn">VIEW ALL SERVICES</Link>
+                  <Link to="/contact" className="bz-primary-btn">CONTACT US</Link>
                   <div className="sidebar-icon-2">
                     <button className="sidebar-trigger open" onClick={toggleSidebar}>
                       <span />
@@ -64,12 +65,6 @@ function Header() {
       </header>
     )
   }
-
-  // Header button text varies by page
-  const headerBtnText = pathname === '/service' ? 'Get Funded Now'
-    : pathname === '/service-details' ? 'Get Funding'
-    : isGovernmentSchemes ? 'Get Funding'
-    : 'CONTACT US'
 
   // All other pages: full header with middle-header + primary-header
   return (
@@ -124,7 +119,7 @@ function Header() {
             </div>
             <div className="header-right-wrap">
               <div className="header-right">
-                <Link to="/contact" className="header-btn">{headerBtnText}</Link>
+                <Link to="/contact" className="header-btn">CONTACT US</Link>
                 <div className="sidebar-icon">
                   <button className="sidebar-trigger open" onClick={toggleSidebar}>
                     <span />

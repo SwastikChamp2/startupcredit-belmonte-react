@@ -11,6 +11,7 @@ function Contact() {
       id: `contact-${Date.now()}`,
       name: String(formData.get('fullname') || '').trim(),
       email: String(formData.get('email') || '').trim(),
+      mobile: String(formData.get('mobile') || '').trim(),
       subject: String(formData.get('subject') || '').trim(),
       message: String(formData.get('message') || '').trim(),
       submittedAt: new Date().toLocaleString('en-IN', {
@@ -67,7 +68,13 @@ function Contact() {
                       </div>
                     </div>
                     <div className="form-group row">
-                      <div className="col-md-12">
+                      <div className="col-md-6">
+                        <div className="form-item">
+                          <input type="tel" id="mobile" name="mobile" className="form-control" placeholder="Mobile Number" />
+                          <div className="icon"><i className="fas fa-phone" /></div>
+                        </div>
+                      </div>
+                      <div className="col-md-6">
                         <div className="form-item">
                           <input type="text" id="subject" name="subject" className="form-control" placeholder="Subject" />
                           <div className="icon"><i className="fas fa-heading" /></div>
