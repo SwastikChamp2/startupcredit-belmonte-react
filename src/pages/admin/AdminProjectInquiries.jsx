@@ -3,156 +3,99 @@ import { Navigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import AdminPagination from './AdminPagination'
 import useAdminPagination from './useAdminPagination'
-
-const PROJECT_INQUIRIES_STORAGE_KEY = 'startupCreditProjectInquiries'
-
-const SEEDED_INQUIRIES = [
-  {
-    id: 'inquiry-cold-storage',
-    projectTitle: 'Agri Cold Storage Unit',
-    projectDescription: 'Cold storage facility for fruits and vegetables.',
-    createdAt: '12 May 2024, 10:30 AM',
-    status: 'Inquiry Pending',
-    submittedByType: 'Self',
-    creatorName: 'Aarav Sharma',
-    creatorEmail: 'aarav.sharma@example.com',
-    sectionCode: 'H',
-    sectionName: 'Transportation and Storage',
-    divisionCode: '52',
-    divisionName: 'Warehousing and support activities for transportation',
-    groupCode: '521',
-    groupName: 'Warehousing and storage',
-    classCode: '5210',
-    className: 'Warehousing and storage',
-    nicCode: '52102',
-    nicName: 'Storage and warehousing',
-  },
-  {
-    id: 'inquiry-solar-panel',
-    projectTitle: 'Solar Panel Manufacturing',
-    projectDescription: 'Production unit for solar panels.',
-    createdAt: '28 June 2024, 04:15 PM',
-    status: 'Inquiry Accepted',
-    submittedByType: 'Associate',
-    creatorName: 'Priya Nair',
-    creatorEmail: 'priya.nair@example.com',
-    sectionCode: 'C',
-    sectionName: 'Manufacturing',
-    divisionCode: '27',
-    divisionName: 'Manufacture of electrical equipment',
-    groupCode: '271',
-    groupName: 'Manufacture of electric motors, generators and transformers',
-    classCode: '2710',
-    className: 'Manufacture of electric motors, generators and transformers',
-    nicCode: '29309',
-    nicName: 'Manufacture of electrical equipment',
-  },
-  {
-    id: 'inquiry-food-processing',
-    projectTitle: 'Food Processing Plant',
-    projectDescription: 'Processing and packaging unit for spices.',
-    createdAt: '09 August 2024, 11:20 AM',
-    status: 'Inquiry Pending',
-    submittedByType: 'Self',
-    creatorName: 'Rohan Mehta',
-    creatorEmail: 'rohan.mehta@example.com',
-    sectionCode: 'C',
-    sectionName: 'Manufacturing',
-    divisionCode: '10',
-    divisionName: 'Manufacture of food products',
-    groupCode: '103',
-    groupName: 'Processing and preserving of fruit and vegetables',
-    classCode: '1030',
-    className: 'Processing and preserving of fruit and vegetables',
-    nicCode: '10309',
-    nicName: 'Processing and preserving of fruits and vegetables',
-  },
-  {
-    id: 'inquiry-it-services',
-    projectTitle: 'IT Solutions and Services',
-    projectDescription: 'Software development and IT consulting services.',
-    createdAt: '17 October 2024, 09:45 AM',
-    status: 'Inquiry Accepted',
-    submittedByType: 'Associate',
-    creatorName: 'Ananya Iyer',
-    creatorEmail: 'ananya.iyer@example.com',
-    sectionCode: 'J',
-    sectionName: 'Information and Communication',
-    divisionCode: '62',
-    divisionName: 'Computer programming, consultancy and related activities',
-    groupCode: '620',
-    groupName: 'Computer programming, consultancy and related activities',
-    classCode: '6202',
-    className: 'Computer consultancy and computer facilities management',
-    nicCode: '62020',
-    nicName: 'Computer programming, consultancy and related activities',
-  },
-]
-
-function readStoredInquiries() {
-  try {
-    return JSON.parse(localStorage.getItem(PROJECT_INQUIRIES_STORAGE_KEY) || '[]')
-  } catch {
-    return []
-  }
-}
+import {
+  adaptProjectForAdmin,
+  updateAdminProjectSubmission,
+} from '../../services/adminDataApi'
+import { useFirestoreCollection } from '../../hooks/useFirestoreSnapshot'
 
 function getInitials(name) {
-  return name
+  return String(name || '')
     .split(' ')
     .map((part) => part[0])
+    .filter(Boolean)
     .join('')
     .slice(0, 2)
-    .toUpperCase()
+    .toUpperCase() || 'NA'
 }
 
 function getStatusClass(status) {
   return status === 'Inquiry Accepted' ? 'accepted' : 'pending'
 }
 
+// Only "Inquiry Pending" submissions belong on this page. Once an admin accepts
+// an inquiry it transitions straight into the active project workflow (status
+// "In Discussion") and shows up under Project Management instead.
+const INQUIRY_STATUSES = new Set(['Inquiry Pending'])
+
 function AdminProjectInquiries() {
   const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
-  const [inquiries, setInquiries] = useState(() => [
-    ...SEEDED_INQUIRIES,
-    ...readStoredInquiries(),
-  ])
+  const [errorMsg, setErrorMsg] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
   const [sourceFilter, setSourceFilter] = useState('All')
   const [selectedInquiry, setSelectedInquiry] = useState(null)
+  const [actionPending, setActionPending] = useState(null)
+  const [sortOrder, setSortOrder] = useState('desc')
+
+  const { items, loading, error: liveError } = useFirestoreCollection(
+    'selectProjectSubmissions',
+    adaptProjectForAdmin
+  )
+  const inquiries = useMemo(
+    () => items.filter((row) => INQUIRY_STATUSES.has(row.status)),
+    [items]
+  )
+
+  const parseDate = (dateStr) => {
+    if (!dateStr || dateStr === '—') return 0
+    return new Date(dateStr).getTime() || 0
+  }
 
   const filteredInquiries = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
 
-    return inquiries.filter((inquiry) => {
-      const matchesStatus =
-        statusFilter === 'All' || inquiry.status === statusFilter
+    const result = inquiries.filter((inquiry) => {
+      const matchesStatus = statusFilter === 'All' || inquiry.status === statusFilter
       const matchesSource =
-        sourceFilter === 'All' || inquiry.submittedByType === sourceFilter
+        sourceFilter === 'All' ||
+        (sourceFilter === 'Self' && inquiry.submittedByType === 'Self') ||
+        (sourceFilter === 'Associate' && inquiry.submittedByType === 'Associate')
       const matchesSearch =
         !query ||
         inquiry.projectTitle.toLowerCase().includes(query) ||
-        inquiry.creatorName.toLowerCase().includes(query) ||
-        inquiry.creatorEmail.toLowerCase().includes(query) ||
-        inquiry.nicCode.toLowerCase().includes(query)
+        (inquiry.creatorName || '').toLowerCase().includes(query) ||
+        (inquiry.creatorEmail || '').toLowerCase().includes(query) ||
+        (inquiry.nicCode || '').toLowerCase().includes(query)
 
       return matchesStatus && matchesSource && matchesSearch
     })
-  }, [inquiries, searchTerm, sourceFilter, statusFilter])
+
+    return result.sort((a, b) => {
+      const timeA = parseDate(a.createdAt)
+      const timeB = parseDate(b.createdAt)
+      return sortOrder === 'desc' ? timeB - timeA : timeA - timeB
+    })
+  }, [inquiries, searchTerm, sourceFilter, statusFilter, sortOrder])
   const inquiriesPagination = useAdminPagination(filteredInquiries)
 
   if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />
   }
 
-  const acceptInquiry = (inquiryId) => {
-    setInquiries((currentInquiries) =>
-      currentInquiries.map((inquiry) =>
-        inquiry.id === inquiryId
-          ? { ...inquiry, status: 'Inquiry Accepted' }
-          : inquiry,
-      ),
-    )
+  const acceptInquiry = async (inquiryId) => {
+    setActionPending(inquiryId)
+    setErrorMsg('')
+    try {
+      // Transition straight to the first active project workflow status so the
+      // submission appears under /admin/projects with a real status.
+      await updateAdminProjectSubmission(inquiryId, { status: 'In Discussion' })
+      // No reload — the live snapshot will drop this row from the inquiries list.
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not accept inquiry.')
+    } finally {
+      setActionPending(null)
+    }
   }
 
   return (
@@ -161,6 +104,18 @@ function AdminProjectInquiries() {
       subtitle="View and manage project inquiries submitted through the website."
     >
       <section className="admin-users-card admin-inquiries-card">
+        {(errorMsg || liveError) && (
+          <div style={{ padding: '12px 18px', margin: '12px 18px 0', background: '#fef2f2', color: '#b91c1c', borderRadius: 8, fontSize: 13 }}>
+            {errorMsg || liveError?.message || 'Could not load inquiries.'}
+          </div>
+        )}
+        {loading && (
+          <div className="admin-loader-container">
+            <div className="admin-loader"></div>
+            <span>Loading project inquiries...</span>
+          </div>
+        )}
+
         <div className="admin-users-toolbar admin-inquiries-toolbar">
           <label className="admin-users-search admin-inquiry-search">
             <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
@@ -181,7 +136,6 @@ function AdminProjectInquiries() {
           >
             <option value="All">All Status</option>
             <option value="Inquiry Pending">Inquiry Pending</option>
-            <option value="Inquiry Accepted">Inquiry Accepted</option>
           </select>
 
           <select
@@ -203,6 +157,17 @@ function AdminProjectInquiries() {
                 <th>Project</th>
                 <th>NIC Code</th>
                 <th>Created By</th>
+                <th>
+                  Created On
+                  <button
+                    onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px' }}
+                    aria-label="Toggle sort order"
+                    type="button"
+                  >
+                    <i className={`fa-solid fa-arrow-${sortOrder === 'desc' ? 'down' : 'up'}`} aria-hidden="true" style={{ color: 'var(--text-light)' }}></i>
+                  </button>
+                </th>
                 <th>Inquiry Source</th>
                 <th>Status</th>
                 <th>Actions</th>
@@ -214,12 +179,11 @@ function AdminProjectInquiries() {
                   <td>
                     <div className="admin-project-cell">
                       <strong>{inquiry.projectTitle}</strong>
-                      <span>{inquiry.projectDescription}</span>
                     </div>
                   </td>
                   <td>
                     <div className="admin-project-cell">
-                      <strong>{inquiry.nicCode}</strong>
+                      <strong>{inquiry.nicCode || '—'}</strong>
                       <span>{inquiry.nicName}</span>
                     </div>
                   </td>
@@ -232,9 +196,10 @@ function AdminProjectInquiries() {
                       </div>
                     </div>
                   </td>
+                  <td>{inquiry.createdAt}</td>
                   <td>
-                    <span className={`admin-source ${inquiry.submittedByType.toLowerCase()}`}>
-                      {inquiry.submittedByType}
+                    <span className={`admin-source ${(inquiry.submittedByType || 'self').toLowerCase()}`}>
+                      {inquiry.submittedByType || 'Self'}
                     </span>
                   </td>
                   <td>
@@ -248,11 +213,11 @@ function AdminProjectInquiries() {
                         View
                       </button>
                       <button
-                        disabled={inquiry.status === 'Inquiry Accepted'}
+                        disabled={inquiry.status === 'Inquiry Accepted' || actionPending === inquiry.id}
                         onClick={() => acceptInquiry(inquiry.id)}
                         type="button"
                       >
-                        Accept
+                        {actionPending === inquiry.id ? 'Saving…' : 'Accept'}
                       </button>
                     </div>
                   </td>
@@ -261,11 +226,15 @@ function AdminProjectInquiries() {
             </tbody>
           </table>
 
-          {filteredInquiries.length === 0 && (
+          {!loading && filteredInquiries.length === 0 && (
             <div className="admin-users-empty">
               <i className="fa-regular fa-folder-open" aria-hidden="true"></i>
               <strong>No project inquiries found</strong>
-              <span>Try changing the search or filters.</span>
+              <span>
+                {inquiries.length === 0
+                  ? 'No project inquiries have been submitted yet.'
+                  : 'Try changing the search or filters.'}
+              </span>
             </div>
           )}
         </div>
@@ -313,7 +282,7 @@ function AdminProjectInquiries() {
                 </div>
                 <div>
                   <span>Inquiry Source</span>
-                  <strong>{selectedInquiry.submittedByType}</strong>
+                  <strong>{selectedInquiry.submittedByType || 'Self'}</strong>
                 </div>
                 <div>
                   <span>Created On</span>

@@ -564,7 +564,15 @@
   transform: translateX(4px);
 }
 
+.gs-related-link strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.4;
+}
+
 .gs-related-link span {
+  display: block;
+  margin-top: 8px;
   color: var(--gs-muted);
   font-size: 13px;
 }

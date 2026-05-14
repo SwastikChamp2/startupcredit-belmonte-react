@@ -1,9 +1,16 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import AdminPagination from './AdminPagination'
 import useAdminPagination from './useAdminPagination'
-import { mockServices, SERVICE_CATEGORIES } from './mockServices'
+import {
+  fetchAdminServices,
+  deleteAdminService,
+  updateAdminService,
+  createServiceSection,
+  updateServiceSection,
+  deleteServiceSection,
+} from '../../services/adminDataApi'
 import './admin.css'
 
 function AdminServiceManagement() {
@@ -13,17 +20,46 @@ function AdminServiceManagement() {
   const [searchTerm, setSearchTerm] = useState('')
   const [categoryFilter, setCategoryFilter] = useState('All Categories')
   const [statusFilter, setStatusFilter] = useState('All Status')
-  const [services, setServices] = useState(mockServices)
-  const [categories, setCategories] = useState(SERVICE_CATEGORIES)
+  const [sortOrder, setSortOrder] = useState('asc')
+  const [services, setServices] = useState([])
+  const [sections, setSections] = useState([])
+  const [sectionLookup, setSectionLookup] = useState({ idToTitle: {}, titleToId: {} })
+  const [loading, setLoading] = useState(true)
+  const [errorMsg, setErrorMsg] = useState('')
   const [newCategory, setNewCategory] = useState('')
   const [openMenuId, setOpenMenuId] = useState(null)
   const [serviceToDelete, setServiceToDelete] = useState(null)
 
-  const handleToggleStatus = (id, currentStatus) => {
-    setServices(services.map(s => 
-      s.id === id ? { ...s, status: currentStatus === 'Published' ? 'Draft' : 'Published' } : s
-    ))
+  const categories = useMemo(() => sections.map((s) => s.title), [sections])
+
+  const reload = useCallback(async () => {
+    setLoading(true)
+    setErrorMsg('')
+    try {
+      const data = await fetchAdminServices()
+      setServices(data.services)
+      setSections(data.sections)
+      setSectionLookup(data.sectionLookup)
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not load services.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    reload()
+  }, [reload])
+
+  const handleToggleStatus = async (service) => {
     setOpenMenuId(null)
+    const nextStatus = service.status === 'Published' ? 'Draft' : 'Published'
+    try {
+      await updateAdminService(service.id, { ...service, status: nextStatus }, sectionLookup)
+      await reload()
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not update status.')
+    }
   }
 
   const handleDeleteClick = (id) => {
@@ -31,36 +67,73 @@ function AdminServiceManagement() {
     setOpenMenuId(null)
   }
 
-  const confirmDelete = () => {
-    setServices(services.filter(s => s.id !== serviceToDelete))
-    setServiceToDelete(null)
+  const confirmDelete = async () => {
+    try {
+      await deleteAdminService(serviceToDelete)
+      setServiceToDelete(null)
+      await reload()
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not delete service.')
+      setServiceToDelete(null)
+    }
   }
 
   const filteredServices = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
-    return services.filter((service) => {
+    const filtered = services.filter((service) => {
       const matchesSearch = !query || service.name.toLowerCase().includes(query) || service.slug.toLowerCase().includes(query)
       const matchesCategory = categoryFilter === 'All Categories' || service.category === categoryFilter
       const matchesStatus = statusFilter === 'All Status' || service.status === statusFilter
       return matchesSearch && matchesCategory && matchesStatus
     })
-  }, [services, searchTerm, categoryFilter, statusFilter])
+
+    return filtered.sort((a, b) => {
+      const orderA = a.order ?? 0
+      const orderB = b.order ?? 0
+      return sortOrder === 'desc' ? orderB - orderA : orderA - orderB
+    })
+  }, [services, searchTerm, categoryFilter, statusFilter, sortOrder])
   const servicesPagination = useAdminPagination(filteredServices)
 
   if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />
   }
 
-  const handleAddCategory = (e) => {
+  const handleAddCategory = async (e) => {
     e.preventDefault()
-    if (newCategory.trim() && !categories.includes(newCategory.trim())) {
-      setCategories([...categories, newCategory.trim()])
+    const title = newCategory.trim()
+    if (!title || categories.includes(title)) return
+    try {
+      await createServiceSection({ title, sortOrder: sections.length })
       setNewCategory('')
+      await reload()
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not add category.')
     }
   }
 
-  const handleDeleteCategory = (catToDelete) => {
-    setCategories(categories.filter(c => c !== catToDelete))
+  const handleDeleteCategory = async (catToDelete) => {
+    const target = sections.find((s) => s.title === catToDelete)
+    if (!target) return
+    try {
+      await deleteServiceSection(target.id)
+      await reload()
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not delete category.')
+    }
+  }
+
+  // Reserved for future inline-edit flow on the Categories tab.
+  // eslint-disable-next-line no-unused-vars
+  const handleRenameCategory = async (oldTitle, nextTitle) => {
+    const target = sections.find((s) => s.title === oldTitle)
+    if (!target || !nextTitle.trim()) return
+    try {
+      await updateServiceSection(target.id, { title: nextTitle.trim(), sortOrder: target.sortOrder })
+      await reload()
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not rename category.')
+    }
   }
 
   return (
@@ -69,6 +142,17 @@ function AdminServiceManagement() {
       subtitle="Manage all services, categories and service content."
     >
       <section className="admin-users-card admin-services-card">
+        {errorMsg && (
+          <div style={{ padding: '12px 18px', margin: '12px 18px 0', background: '#fef2f2', color: '#b91c1c', borderRadius: 8, fontSize: 13 }}>
+            {errorMsg}
+          </div>
+        )}
+        {loading && (
+          <div className="admin-loader-container">
+            <div className="admin-loader"></div>
+            <span>Loading services...</span>
+          </div>
+        )}
         <div className="admin-users-toolbar">
           <div className="admin-user-tabs">
             <button
@@ -123,9 +207,6 @@ function AdminServiceManagement() {
                   <option value="Draft">Draft</option>
                 </select>
 
-                <button className="admin-filter-btn">
-                  <i className="fa-solid fa-filter"></i> Filter
-                </button>
               </div>
 
               <div className="admin-services-actions">
@@ -134,9 +215,6 @@ function AdminServiceManagement() {
                   onClick={() => navigate('/admin/services/new')}
                 >
                   <i className="fa-solid fa-plus"></i> Add New Service
-                </button>
-                <button className="admin-export-btn">
-                  <i className="fa-solid fa-download"></i> Export
                 </button>
               </div>
             </div>
@@ -148,7 +226,17 @@ function AdminServiceManagement() {
                     <th>Service Name</th>
                     <th>Category</th>
                     <th>Status</th>
-                    <th>Order</th>
+                    <th>
+                      Order{' '}
+                      <button
+                        onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px' }}
+                        aria-label="Toggle sort order"
+                        type="button"
+                      >
+                        <i className={`fa-solid fa-arrow-${sortOrder === 'desc' ? 'down' : 'up'}`} aria-hidden="true" style={{ color: 'var(--text-light)' }}></i>
+                      </button>
+                    </th>
                     <th>Last Updated</th>
                     <th>Actions</th>
                   </tr>
@@ -206,11 +294,11 @@ function AdminServiceManagement() {
                                 flexDirection: 'column',
                                 gap: '2px'
                               }}>
-                                <button 
+                                <button
                                   style={{ padding: '8px 12px', background: 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', width: '100%', fontSize: '13px', borderRadius: '4px', color: '#334155' }}
                                   onMouseOver={(e) => e.target.style.background = '#f1f5f9'}
                                   onMouseOut={(e) => e.target.style.background = 'transparent'}
-                                  onClick={() => handleToggleStatus(service.id, service.status)}
+                                  onClick={() => handleToggleStatus(service)}
                                 >
                                   {service.status === 'Published' ? 'Change to Draft' : 'Publish'}
                                 </button>

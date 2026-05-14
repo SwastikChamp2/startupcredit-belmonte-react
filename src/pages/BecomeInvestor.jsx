@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import PageHeader from '../components/PageHeader'
 import FileUploadBox from '../components/FileUploadBox'
+import RequireAuth from '../components/RequireAuth'
+import SubmissionModal from '../components/SubmissionModal'
+import { submitInvestorApplication } from '../services/formsApi'
 
 const aadhaarValidationProps = {
   inputMode: 'numeric',
@@ -39,21 +42,46 @@ const panValidationProps = {
 }
 
 function BecomeInvestor() {
-  const [msg, setMsg] = useState('')
+  const [errorMsg, setErrorMsg] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [showModal, setShowModal] = useState(false)
   const [investorType, setInvestorType] = useState('individual')
   const [aadhaarFile, setAadhaarFile] = useState(null)
   const [panFile, setPanFile] = useState(null)
 
   const isOrg = investorType === 'organisation'
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    setMsg('Your investor application has been submitted successfully! Our team will contact you shortly.')
-    e.target.reset()
-    setInvestorType('individual')
-    setAadhaarFile(null)
-    setPanFile(null)
-    setTimeout(() => setMsg(''), 5000)
+    setErrorMsg('')
+
+    const form = e.target
+    const fd = new FormData(form)
+    const fields = {
+      investorType,
+      investorName: fd.get('investorName')?.toString().trim() || '',
+      email: fd.get('email')?.toString().trim() || '',
+      phone: fd.get('phone')?.toString().trim() || '',
+      entityType: isOrg ? fd.get('entityType')?.toString() || '' : '',
+      checkSize: fd.get('checkSize')?.toString() || '',
+      aadhaarNumber: !isOrg ? fd.get('aadhaarNumber')?.toString().trim() || '' : '',
+      panNumber: !isOrg ? fd.get('panNumber')?.toString().trim() || '' : '',
+    }
+    const files = !isOrg ? { aadhaarFile, panFile } : {}
+
+    setSubmitting(true)
+    try {
+      await submitInvestorApplication({ fields, files })
+      setShowModal(true)
+      form.reset()
+      setInvestorType('individual')
+      setAadhaarFile(null)
+      setPanFile(null)
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not submit. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   const radioBoxStyle = (active) => ({
@@ -170,6 +198,10 @@ function BecomeInvestor() {
       </section>
 
       {/* Investor Registration Form */}
+      <RequireAuth
+        title="Login to register as an investor"
+        message="Please log in or create an account before submitting the investor application. Your application is linked to your account so we can follow up with you."
+      >
       <section className="contact-section pt-130 pb-130" style={{ backgroundColor: '#F6F7FA' }}>
         <div className="container">
           <div className="row justify-content-center">
@@ -181,7 +213,13 @@ function BecomeInvestor() {
                 </div>
                 <p className="mb-30">Fill in your details below. Fields marked with * are required.</p>
                 <div className="request-form">
-                  {msg && <div className="alert alert-success mb-3">{msg}</div>}
+                  <SubmissionModal 
+                    isOpen={showModal} 
+                    onClose={() => setShowModal(false)}
+                    title="Registration Successful!"
+                    message="Your investor registration has been received. Our team will review your profile and get in touch with you shortly to discuss investment opportunities."
+                  />
+                  {errorMsg && <div className="alert alert-danger mb-3">{errorMsg}</div>}
                   <form onSubmit={handleSubmit} className="form-horizontal">
 
                     {/* Nature of Investor - Radio Buttons */}
@@ -325,7 +363,9 @@ function BecomeInvestor() {
                     )}
 
                     <div className="submit-btn">
-                      <button className="bz-primary-btn" type="submit">SUBMIT APPLICATION</button>
+                      <button className="bz-primary-btn" type="submit" disabled={submitting}>
+                        {submitting ? 'SUBMITTING...' : 'SUBMIT APPLICATION'}
+                      </button>
                     </div>
                   </form>
                 </div>
@@ -334,6 +374,7 @@ function BecomeInvestor() {
           </div>
         </div>
       </section>
+      </RequireAuth>
     </>
   )
 }

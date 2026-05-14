@@ -2,18 +2,20 @@ import { useMemo, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import AdminPagination from './AdminPagination'
+import AdminStatusDropdown from './AdminStatusDropdown'
 import useAdminPagination from './useAdminPagination'
-import { getAssociateFullName, getBusinessAssociates, updateBusinessAssociate } from './mockBusinessAssociates'
+import {
+  adaptBusinessAssociateForAdmin,
+  updateAdminBusinessAssociate,
+  getAssociateFullName,
+  setAdminUserRole,
+  findUserByEmail,
+} from '../../services/adminDataApi'
+import { useFirestoreCollection } from '../../hooks/useFirestoreSnapshot'
 import './admin.css'
 
 const ASSOCIATE_TABS = ['All Inquiries', 'Verified Associates']
 const ASSOCIATE_STATUSES = ['Inquiry Submitted', 'Verification In progress', 'Verified']
-
-function getStatusClass(status) {
-  if (status === 'Verified') return 'accepted'
-  if (status === 'Verification In progress') return 'pending'
-  return 'submitted'
-}
 
 function AdminBusinessAssociates() {
   const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
@@ -21,17 +23,39 @@ function AdminBusinessAssociates() {
   const [activeTab, setActiveTab] = useState('All Inquiries')
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('All Status')
-  const [associates, setAssociates] = useState(() => getBusinessAssociates())
+  const [errorMsg, setErrorMsg] = useState('')
   const [sortOrder, setSortOrder] = useState('desc')
+  const [openStatusAssociateId, setOpenStatusAssociateId] = useState(null)
+
+  const { items: associates, loading, error: liveError } = useFirestoreCollection(
+    'businessAssociateApplications',
+    adaptBusinessAssociateForAdmin
+  )
 
   const parseDate = (dateStr) => {
     if (!dateStr || dateStr === 'Today' || dateStr === '-') return Number.MAX_SAFE_INTEGER
     return new Date(dateStr).getTime()
   }
 
-  const handleStatusChange = (associateId, newStatus) => {
-    updateBusinessAssociate(associateId, (assoc) => ({ ...assoc, status: newStatus }))
-    setAssociates(getBusinessAssociates())
+  const handleStatusChange = async (associateId, newStatus) => {
+    setErrorMsg('')
+    try {
+      await updateAdminBusinessAssociate(associateId, { status: newStatus })
+      if (newStatus === 'Verified') {
+        const associate = associates.find((item) => item.id === associateId)
+        let uid = associate?.submittedByUid || ''
+        if (!uid && associate?.email) {
+          const userRec = await findUserByEmail(associate.email)
+          uid = userRec?.id || ''
+        }
+        if (uid) {
+          await setAdminUserRole(uid, 'Associate')
+        }
+      }
+      // Live snapshot listener picks up the change.
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not update status.')
+    }
   }
 
   const verifiedCount = associates.filter((associate) => associate.status === 'Verified').length
@@ -74,6 +98,16 @@ function AdminBusinessAssociates() {
       subtitle="Manage and verify all business associate applications."
     >
       <section className="admin-users-card admin-associates-card">
+        {(errorMsg || liveError) && (
+          <div style={{ padding: '12px 18px', margin: '12px 18px 0', background: '#fef2f2', color: '#b91c1c', borderRadius: 8, fontSize: 13 }}>
+            {errorMsg || liveError?.message || 'Could not load business associates.'}
+          </div>
+        )}
+        {loading && (
+          <div style={{ padding: '12px 18px', margin: '12px 18px 0', background: '#eff6ff', color: '#1e40af', borderRadius: 8, fontSize: 13 }}>
+            Loading business associates…
+          </div>
+        )}
         <div className="admin-users-toolbar">
           <div className="admin-user-tabs" aria-label="Business associate status summary">
             {ASSOCIATE_TABS.map((tab) => (
@@ -154,16 +188,22 @@ function AdminBusinessAssociates() {
                     <td>{associate.email}</td>
                     <td>{associate.mobile}</td>
                     <td>
-                      <select
-                        className={`admin-investor-status ${getStatusClass(associate.status)}`}
-                        value={associate.status}
-                        onChange={(e) => handleStatusChange(associate.id, e.target.value)}
-                        style={{ border: 'none', cursor: 'pointer', appearance: 'auto' }}
-                      >
-                        {ASSOCIATE_STATUSES.map(status => (
-                          <option key={status} value={status}>{status}</option>
-                        ))}
-                      </select>
+                      {associate.status === 'Verified' ? (
+                        <span className="admin-investor-status accepted">Verified</span>
+                      ) : (
+                      <AdminStatusDropdown
+                        badgeClassName="admin-investor-status"
+                        isOpen={openStatusAssociateId === associate.id}
+                        onClose={() => setOpenStatusAssociateId(null)}
+                        onOpen={() => setOpenStatusAssociateId(associate.id)}
+                        onStatusChange={(nextStatus) => {
+                          handleStatusChange(associate.id, nextStatus)
+                          setOpenStatusAssociateId(null)
+                        }}
+                        status={associate.status}
+                        statuses={ASSOCIATE_STATUSES}
+                      />
+                      )}
                     </td>
                     <td>{associate.appliedOn}</td>
                     <td>

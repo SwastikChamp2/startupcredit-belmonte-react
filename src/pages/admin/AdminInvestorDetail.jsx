@@ -1,12 +1,59 @@
-import { useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import AdminShell from './AdminShell'
-import AdminPagination from './AdminPagination'
-import useAdminPagination from './useAdminPagination'
-import { mockInvestors } from './mockInvestors'
+import DocumentPreviewModal from '../../components/DocumentPreviewModal'
+import {
+  fetchAdminInvestor,
+  updateAdminInvestor,
+  uploadAdminFile,
+  documentDownloadUrl,
+  documentIconClass,
+} from '../../services/adminDataApi'
 import './admin.css'
 
+const ACCEPTED_FILE_TYPES = '.pdf,.xls,.xlsx,.doc,.docx,.jpg,.jpeg,.png'
+const ENTITY_TYPES = [
+  'Sole Proprietorship',
+  'Partnership',
+  'LLP',
+  'Private Limited',
+  'Public Limited',
+  'Bank',
+  'NBFC',
+  'AIF',
+  'Angel Syndicate',
+  'VC Firm',
+]
+const CHECK_SIZES = [
+  'Less than 1 Lakh',
+  '1 - 10 Lakhs',
+  '10 - 50 Lakhs',
+  '50 Lakhs - 1 Crore',
+  '1 - 5 Crores',
+  '5 - 10 Crores',
+  '10 - 25 Crores',
+  '25 - 50 Crores',
+  '50 - 100 Crores',
+  '100 Crores+',
+]
+
+function formatFileSize(bytes) {
+  if (!bytes) return '0 KB'
+  if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+}
+
+function getFileType(fileName) {
+  const extension = fileName.split('.').pop()?.toLowerCase()
+  if (extension === 'pdf') return 'PDF'
+  if (extension === 'xls' || extension === 'xlsx') return 'Excel'
+  if (extension === 'doc' || extension === 'docx') return 'Word'
+  if (['jpg', 'jpeg', 'png'].includes(extension)) return 'Image'
+  return 'File'
+}
+
 const INVESTOR_TABS = ['Investor Details', 'Documents', 'Activity Log']
+const INVESTOR_WORKFLOW_STATUSES = ['Inquiry Submitted', 'Verification In progress', 'Verified']
 
 function getStatusClass(status) {
   if (status === 'Verified') return 'accepted'
@@ -19,18 +66,57 @@ function AdminInvestorDetail() {
   const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
   const { investorId } = useParams()
   const navigate = useNavigate()
-  const initialInvestor = mockInvestors.find((investor) => investor.id === investorId)
-  const [investor, setInvestor] = useState(initialInvestor)
-  const [draftInvestor, setDraftInvestor] = useState(initialInvestor)
+  const [investor, setInvestor] = useState(null)
+  const [draftInvestor, setDraftInvestor] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [errorMsg, setErrorMsg] = useState('')
   const [editingCard, setEditingCard] = useState(null)
   const [activeTab, setActiveTab] = useState('Investor Details')
-  const [notes, setNotes] = useState(initialInvestor?.notes || '')
+  const [notes, setNotes] = useState('')
   const [isEditingNotes, setIsEditingNotes] = useState(false)
-  const [documents, setDocuments] = useState(initialInvestor?.documents || [])
-  const documentsPagination = useAdminPagination(documents)
+  const [documents, setDocuments] = useState([])
+  const [previewDoc, setPreviewDoc] = useState(null)
+  const [newFieldName, setNewFieldName] = useState('')
+  const [uploadingDocId, setUploadingDocId] = useState(null)
+  const [editingFieldId, setEditingFieldId] = useState(null)
+  const [editingFieldName, setEditingFieldName] = useState('')
+
+  const reload = useCallback(async () => {
+    setLoading(true)
+    setErrorMsg('')
+    try {
+      const fresh = await fetchAdminInvestor(investorId)
+      setInvestor(fresh)
+      setDraftInvestor(fresh)
+      setNotes(fresh?.notes || '')
+      setDocuments(fresh?.documents || [])
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not load investor.')
+    } finally {
+      setLoading(false)
+    }
+  }, [investorId])
+
+  useEffect(() => {
+    reload()
+  }, [reload])
 
   if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />
+  }
+
+  if (loading) {
+    return (
+      <AdminShell title="Investor" subtitle="Loading investor…">
+        <section className="admin-users-card admin-not-found-card">
+          <div className="admin-users-empty">
+            <i className="fa-regular fa-clock" aria-hidden="true"></i>
+            <strong>Loading investor…</strong>
+            <span>Pulling fresh data from Firestore.</span>
+          </div>
+        </section>
+      </AdminShell>
+    )
   }
 
   if (!investor) {
@@ -42,7 +128,7 @@ function AdminInvestorDetail() {
         <section className="admin-users-card admin-not-found-card">
           <div className="admin-users-empty">
             <i className="fa-regular fa-user" aria-hidden="true"></i>
-            <strong>Investor not found</strong>
+            <strong>{errorMsg || 'Investor not found'}</strong>
             <span>Open Investor Management and choose a valid investor.</span>
             <button className="admin-link-button" onClick={() => navigate('/admin/investors')} type="button">
               Back to Investors
@@ -53,71 +139,115 @@ function AdminInvestorDetail() {
     )
   }
 
-  const updateStatus = (status) => {
-    // Update the local state for immediate UI feedback
-    setInvestor((currentInvestor) => ({ ...currentInvestor, status }))
-    
-    // Update the central mock data so changes persist across navigation
-    const centralInvestor = mockInvestors.find((i) => i.id === investorId)
-    if (centralInvestor) {
-      centralInvestor.status = status
-      centralInvestor.reviewedOn = new Date().toLocaleString('en-IN', { 
-        day: '2-digit', 
-        month: 'short', 
-        year: 'numeric', 
-        hour: '2-digit', 
-        minute: '2-digit' 
-      })
-      centralInvestor.reviewedBy = 'Admin User'
+  const persistInvestor = async (patch) => {
+    try {
+      await updateAdminInvestor(investorId, patch)
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not save changes.')
     }
+  }
+
+  const updateStatus = (status) => {
+    const reviewedOn = new Date().toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    const reviewedBy = 'Admin User'
+    setInvestor((cur) => ({ ...cur, status, reviewedOn, reviewedBy }))
+    persistInvestor({ status, reviewedOn, reviewedBy })
   }
 
   const saveEdits = () => {
-    // Update the local state and draft state
     setInvestor(draftInvestor)
-    
-    // Update central mock data
-    const centralInvestor = mockInvestors.find((i) => i.id === investorId)
-    if (centralInvestor) {
-      Object.assign(centralInvestor, draftInvestor)
-    }
-    
     setEditingCard(null)
+    persistInvestor({
+      investorType: (draftInvestor.investorType || '').toLowerCase(),
+      investorName: draftInvestor.name,
+      email: draftInvestor.email,
+      phone: draftInvestor.phone,
+      entityType: draftInvestor.entityType,
+      checkSize: draftInvestor.checkSize,
+      aadhaarNumber: draftInvestor.aadhaar,
+      panNumber: draftInvestor.pan,
+    })
   }
 
-  const addFile = (event) => {
-    const file = event.target.files[0]
+  const addDocumentField = () => {
+    const fieldName = newFieldName.trim()
+    if (!fieldName) return
 
-    if (!file) {
-      return
-    }
+    const next = [
+      ...documents,
+      {
+        id: `doc-${Date.now()}`,
+        fieldName,
+        file: null,
+      },
+    ]
+    setDocuments(next)
+    persistInvestor({ documents: next })
+    setNewFieldName('')
+  }
 
-    const newDoc = {
-      id: `doc-${Date.now()}`,
-      name: file.name,
-      type: file.name.split('.').pop().toUpperCase(),
-      uploadedOn: 'Today',
-    }
+  const attachFile = async (documentId, file) => {
+    if (!file) return
 
-    setDocuments((currentDocuments) => [...currentDocuments, newDoc])
-    
-    // Persist to central data
-    const centralInvestor = mockInvestors.find((i) => i.id === investorId)
-    if (centralInvestor) {
-      centralInvestor.documents = [...(centralInvestor.documents || []), newDoc]
+    setUploadingDocId(documentId)
+    setErrorMsg('')
+    try {
+      const uploaded = await uploadAdminFile(
+        file,
+        `startupcredit/investors/${investorId}`
+      )
+      uploaded.type = uploaded.type || getFileType(file.name)
+      uploaded.size = uploaded.size || formatFileSize(file.size)
+      uploaded.uploadedOn =
+        uploaded.uploadedOn ||
+        new Date().toLocaleString('en-IN', {
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+        })
+
+      const next = documents.map((doc) =>
+        doc.id === documentId ? { ...doc, file: uploaded } : doc
+      )
+      setDocuments(next)
+      persistInvestor({ documents: next })
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not upload file. Please try again.')
+    } finally {
+      setUploadingDocId(null)
     }
   }
 
-  const deleteFile = (documentId) => {
-    setDocuments((currentDocuments) =>
-      currentDocuments.filter((document) => document.id !== documentId),
+  const removeFile = (documentId) => {
+    const next = documents.map((doc) =>
+      doc.id === documentId ? { ...doc, file: null } : doc
     )
-    
-    // Persist to central data
-    const centralInvestor = mockInvestors.find((i) => i.id === investorId)
-    if (centralInvestor) {
-      centralInvestor.documents = centralInvestor.documents.filter(d => d.id !== documentId)
-    }
+    setDocuments(next)
+    persistInvestor({ documents: next })
+  }
+
+  const renameDocumentField = (documentId, newName) => {
+    const trimmed = newName.trim()
+    if (!trimmed) return
+    const next = documents.map((doc) =>
+      doc.id === documentId ? { ...doc, fieldName: trimmed } : doc
+    )
+    setDocuments(next)
+    persistInvestor({ documents: next })
+  }
+
+  const deleteDocumentField = (documentId) => {
+    const next = documents.filter((doc) => doc.id !== documentId)
+    setDocuments(next)
+    persistInvestor({ documents: next })
   }
 
   return (
@@ -135,6 +265,11 @@ function AdminInvestorDetail() {
           {investor.status}
         </span>
       </div>
+      {errorMsg && (
+        <div style={{ padding: '12px 18px', margin: '12px 0', background: '#fef2f2', color: '#b91c1c', borderRadius: 8, fontSize: 13 }}>
+          {errorMsg}
+        </div>
+      )}
 
       <section className="admin-users-card admin-investor-detail-card">
         <header className="admin-investor-detail-header">
@@ -165,6 +300,44 @@ function AdminInvestorDetail() {
             </div>
           )}
         </header>
+
+        <article className="admin-workflow-card admin-detail-workflow-card">
+          <header className="admin-section-header">
+            <h2>Investor Workflow</h2>
+            <span>{Math.max(1, INVESTOR_WORKFLOW_STATUSES.indexOf(investor.status) + 1)} of {INVESTOR_WORKFLOW_STATUSES.length} stages completed</span>
+          </header>
+          <div className="admin-stepper">
+            {INVESTOR_WORKFLOW_STATUSES.map((status, index) => {
+              const currentStatusIndex = Math.max(0, INVESTOR_WORKFLOW_STATUSES.indexOf(investor.status))
+              const isVerified = investor.status === 'Verified'
+              const isCompleted = index <= currentStatusIndex
+              const isLineCompleted = index < currentStatusIndex
+              const isCurrent = index === currentStatusIndex
+              let stepClass = 'admin-step'
+              if (isCompleted) stepClass += ' completed'
+              if (isLineCompleted) stepClass += ' line-completed'
+              if (isCurrent) stepClass += ' active'
+
+              return (
+                <div key={status} className={stepClass}>
+                  <div className="admin-step-content">
+                    <button
+                      className="admin-step-circle"
+                      disabled={isVerified}
+                      onClick={() => updateStatus(status)}
+                      title={isVerified ? 'Investor workflow is locked' : `Update stage to: ${status}`}
+                      type="button"
+                    >
+                      {isCompleted ? <i className="fa-solid fa-check" aria-hidden="true"></i> : index + 1}
+                    </button>
+                    <span className="admin-step-label">{status}</span>
+                  </div>
+                  {index < INVESTOR_WORKFLOW_STATUSES.length - 1 && <div className="admin-step-line"></div>}
+                </div>
+              )
+            })}
+          </div>
+        </article>
 
         <div className="admin-users-toolbar">
           <div className="admin-user-tabs" aria-label="Investor detail tabs">
@@ -222,7 +395,12 @@ function AdminInvestorDetail() {
                     <div>
                       <span>Type of Entity</span>
                       {editingCard === 'investorInfo' ? (
-                        <input type="text" value={draftInvestor.entityType || ''} onChange={(e) => setDraftInvestor({ ...draftInvestor, entityType: e.target.value })} style={{ padding: '0.2rem', width: '100%', fontSize: '0.9rem', border: '1px solid var(--border)', borderRadius: '4px' }} />
+                        <select value={draftInvestor.entityType || ''} onChange={(e) => setDraftInvestor({ ...draftInvestor, entityType: e.target.value })} style={{ padding: '0.2rem', width: '100%', fontSize: '0.9rem', border: '1px solid var(--border)', borderRadius: '4px' }}>
+                          <option value="">Type of Entity</option>
+                          {ENTITY_TYPES.map((entityType) => (
+                            <option key={entityType} value={entityType}>{entityType}</option>
+                          ))}
+                        </select>
                       ) : (
                         <strong>{investor.entityType}</strong>
                       )}
@@ -231,7 +409,12 @@ function AdminInvestorDetail() {
                   <div>
                     <span>Average Check Size</span>
                     {editingCard === 'investorInfo' ? (
-                      <input type="text" value={draftInvestor.checkSize} onChange={(e) => setDraftInvestor({ ...draftInvestor, checkSize: e.target.value })} style={{ padding: '0.2rem', width: '100%', fontSize: '0.9rem', border: '1px solid var(--border)', borderRadius: '4px' }} />
+                      <select value={draftInvestor.checkSize || ''} onChange={(e) => setDraftInvestor({ ...draftInvestor, checkSize: e.target.value })} style={{ padding: '0.2rem', width: '100%', fontSize: '0.9rem', border: '1px solid var(--border)', borderRadius: '4px' }}>
+                        <option value="">Average Check Size</option>
+                        {CHECK_SIZES.map((checkSize) => (
+                          <option key={checkSize} value={checkSize}>{checkSize}</option>
+                        ))}
+                      </select>
                     ) : (
                       <strong>{investor.checkSize}</strong>
                     )}
@@ -300,60 +483,124 @@ function AdminInvestorDetail() {
           )}
 
           {(activeTab === 'Investor Details' || activeTab === 'Documents') && (
-            <article className="admin-detail-card admin-bordered-card">
+            <article className="admin-detail-card admin-bordered-card admin-documents-card">
               <header className="admin-section-header admin-documents-header">
                 <h2>Documents</h2>
-                <label className="admin-link-button admin-file-label">
-                  <i className="fa-solid fa-plus" aria-hidden="true"></i>
-                  Add Files
-                  <input onChange={addFile} type="file" />
-                </label>
+                <div className="admin-add-field">
+                  <input
+                    aria-label="New document field name"
+                    onChange={(event) => setNewFieldName(event.target.value)}
+                    onKeyDown={(event) => event.key === 'Enter' && addDocumentField()}
+                    placeholder="New field name..."
+                    type="text"
+                    value={newFieldName}
+                  />
+                  <button onClick={addDocumentField} type="button">
+                    <i className="fa-solid fa-plus" aria-hidden="true"></i>
+                    Add Field
+                  </button>
+                </div>
               </header>
 
-              <div className="admin-users-table-wrap">
-                <table className="admin-users-table">
-                  <thead>
-                    <tr>
-                      <th>Document Name</th>
-                      <th>Type</th>
-                      <th>Uploaded On</th>
-                      <th>Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {documentsPagination.paginatedItems.map((document) => (
-                      <tr key={document.id}>
-                        <td>
-                          <div className="admin-document-name">
-                            <i className="fa-solid fa-file-lines" aria-hidden="true"></i>
-                            <strong>{document.name}</strong>
-                          </div>
-                        </td>
-                        <td>{document.type}</td>
-                        <td>{document.uploadedOn}</td>
-                        <td>
-                          <div className="admin-user-actions">
-                            <button type="button">Download</button>
-                            <button type="button">View</button>
-                            <button
-                              className="danger"
-                              onClick={() => deleteFile(document.id)}
-                              type="button"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="admin-documents-list">
+                {documents.map((document) => (
+                  <div className="admin-document-row" key={document.id}>
+                    <div>
+                      {editingFieldId === document.id ? (
+                        <input
+                          autoFocus
+                          type="text"
+                          value={editingFieldName}
+                          onChange={(e) => setEditingFieldName(e.target.value)}
+                          onBlur={() => { renameDocumentField(document.id, editingFieldName); setEditingFieldId(null); }}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { renameDocumentField(document.id, editingFieldName); setEditingFieldId(null); } }}
+                          style={{ padding: '0.2rem', fontSize: 'inherit', maxWidth: '260px', fontWeight: 700 }}
+                        />
+                      ) : (
+                        <strong style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <i
+                            className={documentIconClass(document.file)}
+                            aria-hidden="true"
+                            style={{ color: '#1c65d1' }}
+                          />
+                          {document.fieldName}
+                        </strong>
+                      )}
+                      {uploadingDocId === document.id ? (
+                        <span style={{ color: '#1c65d1', fontStyle: 'italic' }}>Uploading…</span>
+                      ) : document.file ? (
+                        <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                          <span>{document.file.name}</span>
+                          <span>· {document.file.type} · {document.file.size} · {document.file.uploadedOn}</span>
+                        </span>
+                      ) : (
+                        <span>No document uploaded</span>
+                      )}
+                    </div>
+                    <div className="admin-document-actions">
+                      <label>
+                        <i className="fa-solid fa-upload" aria-hidden="true"></i>
+                        {document.file ? 'Replace' : 'Upload'}
+                        <input
+                          accept={ACCEPTED_FILE_TYPES}
+                          onChange={(event) => attachFile(document.id, event.target.files[0])}
+                          disabled={uploadingDocId === document.id}
+                          type="file"
+                        />
+                      </label>
+                      {document.file?.url && (
+                        <button
+                          type="button"
+                          className="admin-link-button secondary"
+                          onClick={() =>
+                            setPreviewDoc({ file: document.file, title: document.fieldName })
+                          }
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                        >
+                          <i className="fa-solid fa-eye" aria-hidden="true"></i>
+                          View
+                        </button>
+                      )}
+                      {documentDownloadUrl(document.file) && (
+                        <a
+                          className="admin-link-button secondary"
+                          href={documentDownloadUrl(document.file)}
+                          download
+                          style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem' }}
+                        >
+                          <i className="fa-solid fa-download" aria-hidden="true"></i>
+                          Download
+                        </a>
+                      )}
+                      <button
+                        disabled={!document.file}
+                        onClick={() => removeFile(document.id)}
+                        type="button"
+                      >
+                        Remove File
+                      </button>
+                      <button
+                        className="danger"
+                        onClick={() => deleteDocumentField(document.id)}
+                        type="button"
+                      >
+                        Delete Field
+                      </button>
+                      <button
+                        onClick={() => {
+                          setEditingFieldId(document.id)
+                          setEditingFieldName(document.fieldName)
+                        }}
+                        type="button"
+                        title="Rename field"
+                      >
+                        <i className="fa-solid fa-pencil" aria-hidden="true"></i>
+                        Rename
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
-              <AdminPagination
-                {...documentsPagination}
-                itemLabel="documents"
-                totalRecords={documents.length}
-              />
             </article>
           )}
 
@@ -379,11 +626,7 @@ function AdminInvestorDetail() {
                   className={isEditingNotes ? 'admin-link-button' : 'admin-link-button secondary'}
                   onClick={() => {
                     if (isEditingNotes) {
-                      // Persist to central data when saving
-                      const centralInvestor = mockInvestors.find((i) => i.id === investorId)
-                      if (centralInvestor) {
-                        centralInvestor.notes = notes
-                      }
+                      persistInvestor({ notes })
                     }
                     setIsEditingNotes((current) => !current)
                   }}
@@ -404,6 +647,13 @@ function AdminInvestorDetail() {
           )}
         </div>
       </section>
+
+      <DocumentPreviewModal
+        open={Boolean(previewDoc)}
+        file={previewDoc?.file}
+        title={previewDoc?.title}
+        onClose={() => setPreviewDoc(null)}
+      />
     </AdminShell>
   )
 }

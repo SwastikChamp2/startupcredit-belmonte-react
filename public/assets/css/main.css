@@ -6126,6 +6126,7 @@ START: Header CSS
 
 .service-item-4:hover .service-content a,
 .service-item-4:hover .service-content p,
+.service-item-4:hover .service-content .read-more,
 .service-item-4:hover .service-content .title {
   color: var(--bz-color-common-white);
 }
@@ -12258,7 +12259,7 @@ blockquote .content .author span {
 
 .blog-contact-form .request-form .form-item .form-control {
   background-color: var(--bz-color-common-white);
-  color: var(--bz-color-text-body);
+  color: var(--bz-color-common-black);
   font-size: 16px;
   font-weight: 400;
   -webkit-box-shadow: none;
@@ -12268,6 +12269,14 @@ blockquote .content .author span {
   border-radius: 0;
   margin-bottom: 25px;
   width: 100%;
+}
+
+.blog-contact-form .request-form .form-item select.form-control:invalid {
+  color: var(--bz-color-text-body);
+}
+
+.blog-contact-form .request-form .form-item select.form-control option {
+  color: var(--bz-color-common-black);
 }
 
 .blog-contact-form .request-form .form-item .form-control::-webkit-input-placeholder {

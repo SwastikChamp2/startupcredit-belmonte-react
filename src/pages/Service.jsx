@@ -1,20 +1,40 @@
-import { useMemo, useEffect, useRef } from 'react'
+import { useMemo, useEffect, useRef, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
-import { serviceSections, servicesBySection } from '../data/servicesData'
+import { fetchServicesData } from '../services/staticDataApi'
 
 function Service() {
   const [searchParams] = useSearchParams()
   const highlightSection = searchParams.get('section')
   const highlightRef = useRef(null)
 
+  const [serviceSections, setServiceSections] = useState([])
+  const [servicesBySection, setServicesBySection] = useState({})
+  const [loadError, setLoadError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    fetchServicesData()
+      .then((data) => {
+        if (cancelled) return
+        setServiceSections(data.serviceSections)
+        setServicesBySection(data.servicesBySection)
+      })
+      .catch((err) => {
+        if (!cancelled) setLoadError(err?.message || 'Could not load services.')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
   // Reorder sections: if a section is specified, move it to the top
   const orderedSections = useMemo(() => {
     if (!highlightSection || !servicesBySection[highlightSection]) return serviceSections
     const target = serviceSections.find(s => s.id === highlightSection)
     const rest = serviceSections.filter(s => s.id !== highlightSection)
-    return [target, ...rest]
-  }, [highlightSection])
+    return target ? [target, ...rest] : serviceSections
+  }, [highlightSection, serviceSections, servicesBySection])
 
   // Scroll to the highlighted section, or to top when no section specified
   useEffect(() => {
@@ -31,6 +51,12 @@ function Service() {
 
       <section className="service-section-4 pt-120 pb-120">
         <div className="container">
+          {loadError && (
+            <div className="alert alert-danger mb-4">{loadError}</div>
+          )}
+          {!loadError && orderedSections.length === 0 && (
+            <p className="text-center text-muted">Loading services…</p>
+          )}
           {orderedSections.map((section, sIdx) => {
             const services = servicesBySection[section.id] || []
             if (services.length === 0) return null

@@ -1,25 +1,126 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import PageHeader from '../components/PageHeader'
-import { nicDataFull, allNicCodes } from '../data/nicDataFull'
+import RequireAuth from '../components/RequireAuth'
+import SubmissionModal from '../components/SubmissionModal'
+import { submitProjectInquiry } from '../services/formsApi'
+import { fetchNicData } from '../services/staticDataApi'
+import { useAuth } from '../hooks/useAuth'
+import { collection, query, where, getDocs } from 'firebase/firestore'
+import { db } from '../firebase'
 
 const formatSectionLabel = (s) => `Section ${s.code} - ${s.name}`
 const formatDivisionLabel = (d) => `Division ${d.code} - ${d.name}`
 const formatGroupLabel = (g) => `Group ${g.code} - ${g.name}`
 const formatClassLabel = (c) => `Class ${c.code} - ${c.name}`
 const formatNicCodeLabel = (sc) => `NIC ${sc.code} - ${sc.name}`
+const ASSOCIATE_SUBMISSION_TYPE = 'Associate'
+
+const getAssociateName = (associate) =>
+  [associate?.firstName, associate?.middleName, associate?.lastName].filter(Boolean).join(' ')
 
 function SelectProject() {
-  const [msg, setMsg] = useState('')
+  const [errorMsg, setErrorMsg] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [showModal, setShowModal] = useState(false)
   const [toast, setToast] = useState('')
   const [sectionIdx, setSectionIdx] = useState('')
   const [divisionIdx, setDivisionIdx] = useState('')
   const [groupIdx, setGroupIdx] = useState('')
   const [classIdx, setClassIdx] = useState('')
   const [nicCodeIdx, setNicCodeIdx] = useState('')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [showSuggestions, setShowSuggestions] = useState(false)
-  const searchRef = useRef(null)
-  const isSelectingRef = useRef(false)
+  const [nicDataFull, setNicDataFull] = useState([])
+  const [nicLoading, setNicLoading] = useState(true)
+  const [nicError, setNicError] = useState('')
+  
+  const { user } = useAuth()
+  const [isAssociate, setIsAssociate] = useState(false)
+  const [associateData, setAssociateData] = useState(null)
+  const [submissionType, setSubmissionType] = useState('Self') // 'Self' or 'Associate'
+  const [clientName, setClientName] = useState('')
+  const [clientPhone, setClientPhone] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    fetchNicData()
+      .then((data) => {
+        if (cancelled) return
+        setNicDataFull(data.nicDataFull)
+      })
+      .catch((err) => {
+        if (!cancelled) setNicError(err?.message || 'Could not load NIC data.')
+      })
+      .finally(() => {
+        if (!cancelled) setNicLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+
+    const loadAssociateStatus = async () => {
+      if (!user?.email) {
+        setIsAssociate(false)
+        setAssociateData(null)
+        setSubmissionType('Self')
+        return
+      }
+
+      if (user?.role === 'Associate') {
+        if (cancelled) return
+        setIsAssociate(true)
+        setAssociateData({
+          name: user.name || user.email.split('@')[0],
+          email: user.email || ''
+        })
+        return
+      }
+
+      try {
+        const associateQuery = query(
+          collection(db, 'businessAssociateApplications'),
+          where('email', '==', user.email.toLowerCase())
+        )
+        const snap = await getDocs(associateQuery)
+        if (cancelled) return
+        const verifiedAssociate = snap.docs
+          .map((docSnap) => ({ id: docSnap.id, ...docSnap.data() }))
+          .find((associate) => associate.status === 'Verified')
+
+        if (verifiedAssociate) {
+          setIsAssociate(true)
+          setAssociateData({
+            name: getAssociateName(verifiedAssociate) || user.name || user.email.split('@')[0],
+            email: verifiedAssociate.email || user.email || ''
+          })
+        } else {
+          setIsAssociate(false)
+          setAssociateData(null)
+          setSubmissionType('Self')
+        }
+      } catch (err) {
+        console.warn('Could not verify business associate status:', err)
+        if (cancelled) return
+        setIsAssociate(false)
+        setAssociateData(null)
+        setSubmissionType('Self')
+      }
+    }
+
+    loadAssociateStatus()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user])
+
+  useEffect(() => {
+    if (!isAssociate && submissionType === ASSOCIATE_SUBMISSION_TYPE) {
+      setSubmissionType('Self')
+    }
+  }, [isAssociate, submissionType])
 
   const showToast = (message) => {
     setToast(message)
@@ -30,21 +131,11 @@ function SelectProject() {
     showToast(`Please select ${dependsOn} first to enable ${fieldName}`)
   }
 
-  // Close suggestions when clicking outside the search container
-  useEffect(() => {
-    const handleClickOutside = (e) => {
-      if (searchRef.current && !searchRef.current.contains(e.target)) {
-        setShowSuggestions(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
-
-  const divisions = sectionIdx !== '' ? nicDataFull[sectionIdx].divisions : []
-  const groups = divisionIdx !== '' ? divisions[divisionIdx].groups : []
-  const classes = groupIdx !== '' ? groups[groupIdx].classes : []
-  const nicCodes = classIdx !== '' ? classes[classIdx].sub_classes : []
+  const divisions =
+    sectionIdx !== '' && nicDataFull[sectionIdx] ? nicDataFull[sectionIdx].divisions || [] : []
+  const groups = divisionIdx !== '' && divisions[divisionIdx] ? divisions[divisionIdx].groups || [] : []
+  const classes = groupIdx !== '' && groups[groupIdx] ? groups[groupIdx].classes || [] : []
+  const nicCodes = classIdx !== '' && classes[classIdx] ? classes[classIdx].sub_classes || [] : []
 
   const handleSectionChange = (e) => {
     setSectionIdx(e.target.value)
@@ -72,43 +163,51 @@ function SelectProject() {
     setNicCodeIdx('')
   }
 
-  const searchResults = searchTerm.length >= 2
-    ? allNicCodes.filter(item =>
-        item.sub_class_code.startsWith(searchTerm) ||
-        item.sub_class_name.toLowerCase().includes(searchTerm.toLowerCase())
-      ).slice(0, 20)
-    : []
-
-  const handleSearchChange = (e) => {
-    setSearchTerm(e.target.value)
-    setShowSuggestions(e.target.value.length >= 2)
-  }
-
-  const handleSearchSelect = (item) => {
-    setSectionIdx(String(item.sectionIdx))
-    setDivisionIdx(String(item.divisionIdx))
-    setGroupIdx(String(item.groupIdx))
-    setClassIdx(String(item.classIdx))
-    const subs = nicDataFull[item.sectionIdx].divisions[item.divisionIdx]
-      .groups[item.groupIdx].classes[item.classIdx].sub_classes
-    const nicIdx = subs.findIndex(sc => sc.code === item.sub_class_code)
-    setNicCodeIdx(String(nicIdx))
-    setSearchTerm('')
-    setShowSuggestions(false)
-  }
-
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    setMsg('Your project details have been submitted successfully!')
-    e.target.reset()
-    setSectionIdx('')
-    setDivisionIdx('')
-    setGroupIdx('')
-    setClassIdx('')
-    setNicCodeIdx('')
-    setSearchTerm('')
-    setShowSuggestions(false)
-    setTimeout(() => setMsg(''), 5000)
+    setErrorMsg('')
+
+    const form = e.target
+    const fd = new FormData(form)
+    const section = sectionIdx !== '' ? nicDataFull[sectionIdx] : null
+    const division = section && divisionIdx !== '' ? section.divisions[divisionIdx] : null
+    const group = division && groupIdx !== '' ? division.groups[groupIdx] : null
+    const cls = group && classIdx !== '' ? group.classes[classIdx] : null
+    const sub = cls && nicCodeIdx !== '' ? cls.sub_classes[nicCodeIdx] : null
+
+    const payload = {
+      projectTitle: fd.get('projectTitle')?.toString().trim() || '',
+      projectDescription: fd.get('projectDescription')?.toString().trim() || '',
+      projectSection: section ? `${section.code} - ${section.name}` : '',
+      projectDivision: division ? `${division.code} - ${division.name}` : '',
+      projectGroup: group ? `${group.code} - ${group.name}` : '',
+      projectClass: cls ? `${cls.code} - ${cls.name}` : '',
+      nicCode: sub ? `${sub.code} - ${sub.name}` : '',
+      submittedByType: submissionType,
+      clientName: submissionType === ASSOCIATE_SUBMISSION_TYPE ? clientName : '',
+      clientPhone: submissionType === ASSOCIATE_SUBMISSION_TYPE ? clientPhone : '',
+      associateName: submissionType === ASSOCIATE_SUBMISSION_TYPE ? associateData?.name : '',
+      associateEmail: submissionType === ASSOCIATE_SUBMISSION_TYPE ? associateData?.email : '',
+    }
+
+    setSubmitting(true)
+    try {
+      await submitProjectInquiry(payload)
+      setShowModal(true)
+      form.reset()
+      setSectionIdx('')
+      setDivisionIdx('')
+      setGroupIdx('')
+      setClassIdx('')
+      setNicCodeIdx('')
+      setClientName('')
+      setClientPhone('')
+      setSubmissionType('Self')
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not submit. Please try again.')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -137,6 +236,10 @@ function SelectProject() {
         </div>
       )}
 
+      <RequireAuth
+        title="Login to submit your project"
+        message="Please log in or create an account to submit project details. Your submission will be linked to your account so we can follow up with you."
+      >
       <section className="contact-section pt-130 pb-130">
         <div className="container">
           <div className="row justify-content-center">
@@ -145,8 +248,112 @@ function SelectProject() {
                 <h2 className="title mb-0">Project Information</h2>
                 <p className="mb-30 mt-10">Fill in the details about your project to help us find the right funding for you</p>
                 <div className="request-form">
-                  {msg && <div className="alert alert-success mb-3">{msg}</div>}
+                  <SubmissionModal 
+                    isOpen={showModal} 
+                    onClose={() => setShowModal(false)}
+                    title="Submission Received!"
+                    message="Your project inquiry has been submitted successfully. Our specialists will analyze your requirements and get back to you with potential funding schemes."
+                  />
+                  {errorMsg && <div className="alert alert-danger mb-3">{errorMsg}</div>}
+                  {nicError && <div className="alert alert-danger mb-3">{nicError}</div>}
+                  {nicLoading && !nicError && (
+                    <div className="alert alert-info mb-3">Loading NIC data…</div>
+                  )}
+
+                  {isAssociate && (
+                    <div className="submission-type-toggle mb-4">
+                      <label className="d-block mb-2 font-weight-bold" style={{ fontSize: '15px', color: '#444' }}>Submission Mode</label>
+                      <div className="btn-group w-100" role="group" aria-label="Submission Type">
+                        <button
+                          type="button"
+                          className={`btn ${submissionType === 'Self' ? 'btn-primary' : 'btn-outline-primary'}`}
+                          onClick={() => setSubmissionType('Self')}
+                          style={{ flex: 1, padding: '10px', fontSize: '14px' }}
+                        >
+                          <i className="fas fa-user-circle mr-2"></i> Submitting project for self
+                        </button>
+                        <button
+                          type="button"
+                          className={`btn ${submissionType === ASSOCIATE_SUBMISSION_TYPE ? 'btn-primary' : 'btn-outline-primary'}`}
+                          onClick={() => setSubmissionType(ASSOCIATE_SUBMISSION_TYPE)}
+                          style={{ flex: 1, padding: '10px', fontSize: '14px' }}
+                        >
+                          <i className="fas fa-users-cog mr-2"></i> Submitting project for a client
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
                   <form onSubmit={handleSubmit} className="form-horizontal">
+                    {submissionType === ASSOCIATE_SUBMISSION_TYPE && (
+                      <div className="associate-fields-container mb-4" style={{ 
+                        background: '#f8fafc', 
+                        padding: '20px', 
+                        borderRadius: '12px', 
+                        border: '1px solid #e2e8f0',
+                        boxShadow: 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.05)'
+                      }}>
+                        <h4 style={{ fontSize: '16px', marginBottom: '15px', color: '#1e293b' }}>Client & Associate Details</h4>
+                        <div className="row">
+                          <div className="col-md-6 mb-3">
+                            <div className="form-item">
+                              <input 
+                                type="text" 
+                                className="form-control" 
+                                placeholder="Client Name" 
+                                value={clientName}
+                                onChange={(e) => setClientName(e.target.value)}
+                                required 
+                              />
+                              <div className="icon"><i className="fas fa-user" /></div>
+                            </div>
+                          </div>
+                          <div className="col-md-6 mb-3">
+                            <div className="form-item">
+                              <input 
+                                type="text" 
+                                className="form-control" 
+                                placeholder="Client Number" 
+                                value={clientPhone}
+                                onChange={(e) => setClientPhone(e.target.value)}
+                                required 
+                              />
+                              <div className="icon"><i className="fas fa-phone" /></div>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="row">
+                          <div className="col-md-6 mb-3">
+                            <div className="form-item">
+                              <input 
+                                type="text" 
+                                className="form-control" 
+                                value={associateData?.name || ''} 
+                                readOnly 
+                                style={{ background: '#edf2f7', cursor: 'not-allowed' }}
+                                placeholder="Associate Name"
+                              />
+                              <div className="icon"><i className="fas fa-id-badge" /></div>
+                            </div>
+                            <small className="text-muted">Associate Name (Auto-filled)</small>
+                          </div>
+                          <div className="col-md-6 mb-3">
+                            <div className="form-item">
+                              <input 
+                                type="email" 
+                                className="form-control" 
+                                value={associateData?.email || ''} 
+                                readOnly 
+                                style={{ background: '#edf2f7', cursor: 'not-allowed' }}
+                                placeholder="Associate Email"
+                              />
+                              <div className="icon"><i className="fas fa-envelope" /></div>
+                            </div>
+                            <small className="text-muted">Associate Email (Auto-filled)</small>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     <div className="form-group row">
                       <div className="col-md-12">
                         <div className="form-item">
@@ -327,7 +534,6 @@ function SelectProject() {
                             value={nicCodeIdx}
                             onChange={(e) => setNicCodeIdx(e.target.value)}
                             disabled={classIdx === ''}
-                            required
                           >
                             <option value="">Select Subclass (NIC Code)</option>
                             {nicCodes.map((sc, idx) => (
@@ -347,7 +553,13 @@ function SelectProject() {
                       </div>
                     </div>
                     <div className="submit-btn">
-                      <button className="bz-primary-btn" type="submit">SUBMIT PROJECT</button>
+                      <button
+                        className="bz-primary-btn"
+                        type="submit"
+                        disabled={submitting || nicLoading}
+                      >
+                        {submitting ? 'SUBMITTING...' : 'SUBMIT PROJECT'}
+                      </button>
                     </div>
                   </form>
                 </div>
@@ -356,6 +568,7 @@ function SelectProject() {
           </div>
         </div>
       </section>
+      </RequireAuth>
     </>
   )
 }

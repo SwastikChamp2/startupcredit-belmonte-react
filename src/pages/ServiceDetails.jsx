@@ -1,13 +1,48 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
-import { schemesData } from '../data/schemesData'
+import { fetchSchemeDetail } from '../services/staticDataApi'
+import '../styles/rich-text-content.css'
 
 function ServiceDetails() {
   const [searchParams] = useSearchParams()
   const schemeId = searchParams.get('scheme') || 'invoice-financing'
-  const scheme = schemesData[schemeId]
+  // Track which schemeId the loaded value belongs to so we can derive `loading`
+  // without calling setState synchronously inside the effect.
+  const [loaded, setLoaded] = useState({ schemeId: null, scheme: null, error: '' })
 
+  useEffect(() => {
+    let cancelled = false
+    fetchSchemeDetail(schemeId)
+      .then((value) => {
+        if (!cancelled) setLoaded({ schemeId, scheme: value, error: '' })
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setLoaded({ schemeId, scheme: null, error: err?.message || 'Could not load service detail.' })
+        }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [schemeId])
+
+  const loading = loaded.schemeId !== schemeId
+  const scheme = loading ? null : loaded.scheme
+  const loadError = loading ? '' : loaded.error
+
+  if (loading) {
+    return (
+      <>
+        <PageHeader title="Service Detail" breadcrumb="Service Detail" />
+        <section className="service-details pt-120 pb-120">
+          <div className="container text-center">
+            <p className="text-muted">Loading service…</p>
+          </div>
+        </section>
+      </>
+    )
+  }
 
   if (!scheme) {
     return (
@@ -15,7 +50,8 @@ function ServiceDetails() {
         <PageHeader title="Service Detail" breadcrumb="Service Detail" />
         <section className="error-section pt-120 pb-120">
           <div className="container text-center">
-            <h2>Service not found</h2>
+            <h2>{loadError ? 'Could not load service' : 'Service not found'}</h2>
+            {loadError && <p className="text-muted">{loadError}</p>}
             <Link to="/service" className="bz-primary-btn">Back to Services</Link>
           </div>
         </section>
@@ -32,21 +68,18 @@ function ServiceDetails() {
           <div className="row">
             <div className="col-lg-8">
               <div className="service-details-content">
-                <div className="service-details-img img-reveal">
-                  <div className="img-overlay" />
+                <div className="service-details-img">
                   <img src={scheme.service_details_image} alt={scheme.service_details_image_alt} />
                 </div>
 
                 <h2 className="details-title mb-20 mt-30">{scheme.service_name}</h2>
-                <p className="mb-40">{scheme.page_body}</p>
+                <div className="mb-40 rich-text-render" dangerouslySetInnerHTML={{ __html: scheme.page_body }} />
 
                 <div className="service-thumb-wrap">
-                  <div className="service-thumb img-reveal">
-                    <div className="img-overlay" />
+                  <div className="service-thumb">
                     <img src={scheme.feature_image_1} alt={`${scheme.service_name} feature 1`} />
                   </div>
-                  <div className="service-thumb img-reveal">
-                    <div className="img-overlay" />
+                  <div className="service-thumb">
                     <img src={scheme.feature_image_2} alt={`${scheme.service_name} feature 2`} />
                   </div>
                   <ul className="thumb-list">
@@ -56,8 +89,12 @@ function ServiceDetails() {
                   </ul>
                 </div>
 
-                <h2 className="details-title mb-20 mt-30">Our Approach</h2>
-                <p>{scheme.our_approach_body}</p>
+                {scheme.our_approach_body && (
+                  <>
+                    <h2 className="details-title mb-20 mt-30">Our Approach</h2>
+                    <div className="rich-text-render" dangerouslySetInnerHTML={{ __html: scheme.our_approach_body }} />
+                  </>
+                )}
 
                 {scheme.faqs && scheme.faqs.length > 0 && (
                   <div className="service-details-accordion">
@@ -103,8 +140,15 @@ function ServiceDetails() {
                   <div className="download-area">
                     {scheme.download_files.map((file, i) => (
                       <div className="download-item" key={i}>
-                        <a href={file.href} target="_blank" rel="noreferrer" className="icon">
-                          <img src="assets/img/icon/pdf.png" alt={file.title} />
+                        <a 
+                          href={file.url && String(file.url).startsWith('assets/') ? `/${file.url}` : (file.url || '#')} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className="icon" 
+                          type={String(file.url || '').toLowerCase().endsWith('.pdf') ? 'application/pdf' : undefined}
+                          style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f1f5f9', borderRadius: '8px', border: '1px dashed #cbd5e1' }}
+                        >
+                          <i className="fa-solid fa-arrow-up-right-from-square" style={{ color: '#1769e8', fontSize: '18px' }}></i>
                         </a>
                         <div className="content">
                           <h3 className="title">{file.title}</h3>

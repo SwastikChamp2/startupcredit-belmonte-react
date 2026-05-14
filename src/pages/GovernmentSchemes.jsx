@@ -1,11 +1,7 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import PageHeader from '../components/PageHeader'
-import {
-  governmentSchemeCategories,
-  governmentSchemeCategoryMap,
-  governmentSchemes,
-} from '../data/governmentSchemesData'
+import { fetchGovernmentSchemes } from '../services/staticDataApi'
 import '../styles/government-schemes.css'
 
 const viewOptions = new Set(['scheme-wise', 'category-wise'])
@@ -13,11 +9,42 @@ const viewOptions = new Set(['scheme-wise', 'category-wise'])
 function GovernmentSchemes() {
   const [searchParams] = useSearchParams()
   const initialView = viewOptions.has(searchParams.get('view')) ? searchParams.get('view') : 'scheme-wise'
-  const initialCategory = searchParams.get('category') || governmentSchemeCategories[0].id
+  const initialCategoryParam = searchParams.get('category') || ''
 
   const [activeView, setActiveView] = useState(initialView)
-  const [activeCategoryId, setActiveCategoryId] = useState(initialCategory)
+  const [activeCategoryId, setActiveCategoryId] = useState(initialCategoryParam)
   const [searchTerm, setSearchTerm] = useState('')
+
+  const [governmentSchemes, setGovernmentSchemes] = useState([])
+  const [governmentSchemeCategories, setGovernmentSchemeCategories] = useState([])
+  const [governmentSchemeCategoryMap, setGovernmentSchemeCategoryMap] = useState({})
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    fetchGovernmentSchemes()
+      .then((data) => {
+        if (cancelled) return
+        setGovernmentSchemes(data.schemes)
+        setGovernmentSchemeCategories(data.categories)
+        setGovernmentSchemeCategoryMap(data.categoryMap)
+        if (!activeCategoryId && data.categories.length > 0) {
+          setActiveCategoryId(data.categories[0].id)
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) setLoadError(err?.message || 'Could not load government schemes.')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const filteredSchemes = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
@@ -36,10 +63,13 @@ function GovernmentSchemes() {
 
       return haystack.includes(normalizedSearch)
     })
-  }, [searchTerm])
+  }, [searchTerm, governmentSchemes, governmentSchemeCategoryMap])
 
-  const visibleCategory = governmentSchemeCategoryMap[activeCategoryId] || governmentSchemeCategoryMap[governmentSchemeCategories[0].id]
-  const visibleCategorySchemes = filteredSchemes.filter((scheme) => scheme.categoryId === visibleCategory.id)
+  const fallbackCategory = governmentSchemeCategories[0]
+  const visibleCategory = governmentSchemeCategoryMap[activeCategoryId] || (fallbackCategory ? governmentSchemeCategoryMap[fallbackCategory.id] : null)
+  const visibleCategorySchemes = visibleCategory
+    ? filteredSchemes.filter((scheme) => scheme.categoryId === visibleCategory.id)
+    : []
 
   const setView = (nextView) => {
     setActiveView(nextView)
@@ -60,6 +90,8 @@ function GovernmentSchemes() {
 
       <section className="government-schemes-page pt-120 pb-120">
         <div className="container gs-shell">
+          {loadError && <div className="alert alert-danger mb-4">{loadError}</div>}
+          {loading && !loadError && <p className="text-center text-muted">Loading schemes…</p>}
           <div className="gs-hero fade-top">
             <div className="gs-hero-grid">
               <div>
@@ -156,14 +188,14 @@ function GovernmentSchemes() {
                 <p>Try a shorter keyword or switch to category-wise browsing to explore the seeded catalog.</p>
               </div>
             )
-          ) : (
+          ) : visibleCategory ? (
             <div className="gs-category-layout">
               <aside className="gs-category-sidebar">
                 <h3>Category</h3>
 
                 <div className="gs-category-list">
                   {governmentSchemeCategories.map((category) => {
-                    const count = governmentSchemeCategoryMap[category.id].schemes.length
+                    const count = governmentSchemeCategoryMap[category.id]?.schemes.length || 0
 
                     return (
                       <button
@@ -204,7 +236,7 @@ function GovernmentSchemes() {
                 )}
               </div>
             </div>
-          )}
+          ) : null}
         </div>
       </section>
     </>

@@ -1,9 +1,14 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
-import AdminPagination from './AdminPagination'
-import useAdminPagination from './useAdminPagination'
-import { mockGovernmentSchemes, GOVT_SCHEME_CATEGORIES, MINISTRIES } from './mockGovernmentSchemes'
+import {
+  fetchAdminSchemes,
+  updateAdminScheme,
+  deleteAdminScheme,
+  createSchemeCategory,
+  updateSchemeCategory,
+  deleteSchemeCategory,
+} from '../../services/adminDataApi'
 import './admin.css'
 
 function AdminGovernmentSchemeManagement() {
@@ -11,20 +16,51 @@ function AdminGovernmentSchemeManagement() {
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('All Schemes')
   const [searchTerm, setSearchTerm] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('All Categories')
   const [statusFilter, setStatusFilter] = useState('All Status')
-  const [ministryFilter, setMinistryFilter] = useState('All Ministries')
-  
-  const [schemes, setSchemes] = useState(mockGovernmentSchemes)
-  const [ministriesList, setMinistriesList] = useState(MINISTRIES)
-  const [newMinistry, setNewMinistry] = useState('')
+
+  const [schemes, setSchemes] = useState([])
+  const [rawCategories, setRawCategories] = useState([])
+  const [categoryLookup, setCategoryLookup] = useState({ idToName: {}, nameToId: {} })
+  const [loading, setLoading] = useState(true)
+  const [errorMsg, setErrorMsg] = useState('')
+
+  const [newCategory, setNewCategory] = useState('')
+  const [editingCategory, setEditingCategory] = useState(null)
+  const [editingCategoryName, setEditingCategoryName] = useState('')
   const [openMenuId, setOpenMenuId] = useState(null)
   const [schemeToDelete, setSchemeToDelete] = useState(null)
 
-  const handleToggleStatus = (id, currentStatus) => {
-    setSchemes(schemes.map(s => 
-      s.id === id ? { ...s, status: currentStatus === 'Published' ? 'Draft' : 'Published' } : s
-    ))
+  const categories = useMemo(() => rawCategories.map((c) => c.name), [rawCategories])
+
+  const reload = useCallback(async () => {
+    setLoading(true)
+    setErrorMsg('')
+    try {
+      const data = await fetchAdminSchemes()
+      setSchemes(data.schemes)
+      setRawCategories(data.categories)
+      setCategoryLookup(data.categoryLookup)
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not load government schemes.')
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    reload()
+  }, [reload])
+
+  const handleToggleStatus = async (scheme) => {
     setOpenMenuId(null)
+    const nextStatus = scheme.status === 'Published' ? 'Draft' : 'Published'
+    try {
+      await updateAdminScheme(scheme.id, { ...scheme, status: nextStatus }, categoryLookup)
+      await reload()
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not update status.')
+    }
   }
 
   const handleDeleteClick = (id) => {
@@ -32,9 +68,15 @@ function AdminGovernmentSchemeManagement() {
     setOpenMenuId(null)
   }
 
-  const confirmDelete = () => {
-    setSchemes(schemes.filter(s => s.id !== schemeToDelete))
-    setSchemeToDelete(null)
+  const confirmDelete = async () => {
+    try {
+      await deleteAdminScheme(schemeToDelete)
+      setSchemeToDelete(null)
+      await reload()
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not delete scheme.')
+      setSchemeToDelete(null)
+    }
   }
 
   const filteredSchemes = useMemo(() => {
@@ -45,29 +87,69 @@ function AdminGovernmentSchemeManagement() {
         scheme.slug.toLowerCase().includes(query) ||
         (scheme.fullTitle && scheme.fullTitle.toLowerCase().includes(query))
       
+      const matchesCategory = categoryFilter === 'All Categories' || 
+        (scheme.categories && scheme.categories.includes(categoryFilter))
+      
       const matchesStatus = statusFilter === 'All Status' || scheme.status === statusFilter
       
-      const matchesMinistry = ministryFilter === 'All Ministries' || scheme.ministry === ministryFilter
-      
-      return matchesSearch && matchesStatus && matchesMinistry
+      return matchesSearch && matchesCategory && matchesStatus
     })
-  }, [schemes, searchTerm, statusFilter, ministryFilter])
-  const schemesPagination = useAdminPagination(filteredSchemes)
+  }, [schemes, searchTerm, categoryFilter, statusFilter])
 
   if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />
   }
 
-  const handleAddMinistry = (e) => {
+  const handleAddCategory = async (e) => {
     e.preventDefault()
-    if (newMinistry.trim() && !ministriesList.includes(newMinistry.trim())) {
-      setMinistriesList([...ministriesList, newMinistry.trim()])
-      setNewMinistry('')
+    const name = newCategory.trim()
+    if (!name || categories.includes(name)) return
+    try {
+      await createSchemeCategory({ name, sortOrder: rawCategories.length })
+      setNewCategory('')
+      await reload()
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not add category.')
     }
   }
 
-  const handleDeleteMinistry = (minToDelete) => {
-    setMinistriesList(ministriesList.filter(m => m !== minToDelete))
+  const handleDeleteCategory = async (catToDelete) => {
+    const target = rawCategories.find((c) => c.name === catToDelete)
+    if (!target) return
+    try {
+      await deleteSchemeCategory(target.id)
+      if (categoryFilter === catToDelete) setCategoryFilter('All Categories')
+      setEditingCategory(null)
+      setEditingCategoryName('')
+      await reload()
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not delete category.')
+    }
+  }
+
+  const startEditCategory = (category) => {
+    setEditingCategory(category)
+    setEditingCategoryName(category)
+  }
+
+  const cancelEditCategory = () => {
+    setEditingCategory(null)
+    setEditingCategoryName('')
+  }
+
+  const saveCategoryEdit = async () => {
+    const nextName = editingCategoryName.trim()
+    const target = rawCategories.find((c) => c.name === editingCategory)
+    if (!target) return
+    if (!nextName || (nextName !== editingCategory && categories.includes(nextName))) return
+    try {
+      await updateSchemeCategory(target.id, { name: nextName, sortOrder: target.sortOrder })
+      if (categoryFilter === editingCategory) setCategoryFilter(nextName)
+      cancelEditCategory()
+      await reload()
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not update category.')
+    }
   }
 
   return (
@@ -76,6 +158,17 @@ function AdminGovernmentSchemeManagement() {
       subtitle="Manage all government schemes, categories and scheme content."
     >
       <section className="admin-users-card admin-schemes-card">
+        {errorMsg && (
+          <div style={{ padding: '12px 18px', margin: '12px 18px 0', background: '#fef2f2', color: '#b91c1c', borderRadius: 8, fontSize: 13 }}>
+            {errorMsg}
+          </div>
+        )}
+        {loading && (
+          <div className="admin-loader-container">
+            <div className="admin-loader"></div>
+            <span>Loading schemes...</span>
+          </div>
+        )}
         <div className="admin-users-toolbar">
           <div className="admin-user-tabs">
             <button
@@ -86,11 +179,11 @@ function AdminGovernmentSchemeManagement() {
               All Schemes ({schemes.length})
             </button>
             <button
-              className={activeTab === 'Ministries' ? 'active' : ''}
-              onClick={() => setActiveTab('Ministries')}
+              className={activeTab === 'Categories' ? 'active' : ''}
+              onClick={() => setActiveTab('Categories')}
               type="button"
             >
-              Ministries ({ministriesList.length})
+              Categories ({categories.length})
             </button>
           </div>
         </div>
@@ -109,7 +202,16 @@ function AdminGovernmentSchemeManagement() {
                   />
                 </label>
 
-
+                <select
+                  className="admin-filter-select"
+                  value={categoryFilter}
+                  onChange={(e) => setCategoryFilter(e.target.value)}
+                >
+                  <option value="All Categories">All Categories</option>
+                  {categories.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
 
                 <select
                   className="admin-filter-select"
@@ -121,20 +223,6 @@ function AdminGovernmentSchemeManagement() {
                   <option value="Draft">Draft</option>
                 </select>
 
-                <select
-                  className="admin-filter-select"
-                  value={ministryFilter}
-                  onChange={(e) => setMinistryFilter(e.target.value)}
-                >
-                  <option value="All Ministries">All Ministries</option>
-                  {ministriesList.map(min => (
-                    <option key={min} value={min}>{min}</option>
-                  ))}
-                </select>
-
-                <button className="admin-filter-btn">
-                  <i className="fa-solid fa-filter"></i> Filter
-                </button>
               </div>
 
               <div className="admin-services-actions">
@@ -144,9 +232,6 @@ function AdminGovernmentSchemeManagement() {
                 >
                   <i className="fa-solid fa-plus"></i> Add New Scheme
                 </button>
-                <button className="admin-export-btn">
-                  <i className="fa-solid fa-download"></i> Export
-                </button>
               </div>
             </div>
 
@@ -155,26 +240,33 @@ function AdminGovernmentSchemeManagement() {
                 <thead>
                   <tr>
                     <th>Scheme Name</th>
-                    <th>Ministry</th>
+                    <th>Categories</th>
                     <th>Status</th>
                     <th>Last Updated</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {schemesPagination.paginatedItems.map((scheme) => (
+                  {filteredSchemes.map((scheme) => (
                     <tr key={scheme.id}>
                       <td>
                         <div className="admin-service-cell-info">
+                          <div className="admin-avatar">{scheme.avatar}</div>
                           <div>
                             <strong>{scheme.name}</strong>
                             <span>{scheme.fullTitle || scheme.slug}</span>
                           </div>
                         </div>
                       </td>
-
                       <td>
-                        <span className="admin-ministry-text">{scheme.ministry || 'N/A'}</span>
+                        <div className="admin-cat-badges-list">
+                          {scheme.categories?.slice(0, 2).map(cat => (
+                            <span key={cat} className="admin-service-cat-badge">{cat}</span>
+                          ))}
+                          {scheme.categories?.length > 2 && (
+                            <span className="admin-cat-more">+{scheme.categories.length - 2}</span>
+                          )}
+                        </div>
                       </td>
                       <td>
                         <span className={`admin-service-status-badge ${scheme.status?.toLowerCase()}`}>
@@ -213,11 +305,11 @@ function AdminGovernmentSchemeManagement() {
                                 flexDirection: 'column',
                                 gap: '2px'
                               }}>
-                                <button 
+                                <button
                                   style={{ padding: '8px 12px', background: 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', width: '100%', fontSize: '13px', borderRadius: '4px', color: '#334155' }}
                                   onMouseOver={(e) => e.target.style.background = '#f1f5f9'}
                                   onMouseOut={(e) => e.target.style.background = 'transparent'}
-                                  onClick={() => handleToggleStatus(scheme.id, scheme.status)}
+                                  onClick={() => handleToggleStatus(scheme)}
                                 >
                                   {scheme.status === 'Published' ? 'Change to Draft' : 'Publish'}
                                 </button>
@@ -240,49 +332,73 @@ function AdminGovernmentSchemeManagement() {
               </table>
             </div>
 
-            <AdminPagination
-              {...schemesPagination}
-              itemLabel="schemes"
-              totalRecords={schemes.length}
-            />
 
           </>
-        ) : (
+        ) : activeTab === 'Categories' ? (
           <div className="admin-categories-view">
             <div className="admin-category-add-form">
-              <h3>Add New Ministry</h3>
-              <form onSubmit={handleAddMinistry}>
+              <h3>Add New Category</h3>
+              <form onSubmit={handleAddCategory}>
                 <input 
                   type="text" 
-                  placeholder="Enter ministry name..." 
-                  value={newMinistry}
-                  onChange={(e) => setNewMinistry(e.target.value)}
+                  placeholder="Enter category name..." 
+                  value={newCategory}
+                  onChange={(e) => setNewCategory(e.target.value)}
                 />
-                <button type="submit" className="admin-add-service-btn">Add Ministry</button>
+                <button type="submit" className="admin-add-service-btn">Add Category</button>
               </form>
             </div>
 
             <div className="admin-category-list">
-              <h3>Existing Ministries</h3>
+              <h3>Existing Categories</h3>
               <div className="admin-category-grid">
-                {ministriesList.map((min) => (
-                  <div key={min} className="admin-category-item">
-                    <span>{min}</span>
+                {categories.map((cat) => (
+                  <div key={cat} className="admin-category-item">
+                    {editingCategory === cat ? (
+                      <input
+                        autoFocus
+                        onChange={(e) => setEditingCategoryName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveCategoryEdit()
+                          if (e.key === 'Escape') cancelEditCategory()
+                        }}
+                        type="text"
+                        value={editingCategoryName}
+                      />
+                    ) : (
+                      <span>{cat}</span>
+                    )}
                     <div className="admin-category-actions">
-                      <button className="admin-edit-btn"><i className="fa-solid fa-pencil"></i></button>
-                      <button 
-                        className="admin-delete-btn"
-                        onClick={() => handleDeleteMinistry(min)}
-                      >
-                        <i className="fa-solid fa-trash"></i>
-                      </button>
+                      {editingCategory === cat ? (
+                        <>
+                          <button className="admin-edit-btn" onClick={saveCategoryEdit} type="button">
+                            <i className="fa-solid fa-check"></i>
+                          </button>
+                          <button className="admin-delete-btn" onClick={cancelEditCategory} type="button">
+                            <i className="fa-solid fa-xmark"></i>
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button className="admin-edit-btn" onClick={() => startEditCategory(cat)} type="button">
+                            <i className="fa-solid fa-pencil"></i>
+                          </button>
+                          <button 
+                            className="admin-delete-btn"
+                            onClick={() => handleDeleteCategory(cat)}
+                            type="button"
+                          >
+                            <i className="fa-solid fa-trash"></i>
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                 ))}
               </div>
             </div>
           </div>
-        )}
+        ) : null}
       </section>
 
       {schemeToDelete && (

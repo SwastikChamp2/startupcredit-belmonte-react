@@ -1,42 +1,36 @@
 import { useState } from 'react'
 import PageHeader from '../components/PageHeader'
+import SubmissionModal from '../components/SubmissionModal'
+import { submitContactInquiry } from '../services/formsApi'
 
 function Contact() {
-  const [msg, setMsg] = useState('')
+  const [errorMsg, setErrorMsg] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [showModal, setShowModal] = useState(false)
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
+    setErrorMsg('')
+
     const formData = new FormData(e.target)
-    const contactInquiry = {
-      id: `contact-${Date.now()}`,
+    const payload = {
       name: String(formData.get('fullname') || '').trim(),
       email: String(formData.get('email') || '').trim(),
       mobile: String(formData.get('mobile') || '').trim(),
       subject: String(formData.get('subject') || '').trim(),
       message: String(formData.get('message') || '').trim(),
-      submittedAt: new Date().toLocaleString('en-IN', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-      }),
     }
-    let savedInquiries = []
 
+    setSubmitting(true)
     try {
-      savedInquiries = JSON.parse(localStorage.getItem('startupCreditContactInquiries') || '[]')
-    } catch {
-      savedInquiries = []
+      await submitContactInquiry(payload)
+      setShowModal(true)
+      e.target.reset()
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not send your message. Please try again.')
+    } finally {
+      setSubmitting(false)
     }
-
-    localStorage.setItem(
-      'startupCreditContactInquiries',
-      JSON.stringify([contactInquiry, ...savedInquiries]),
-    )
-    setMsg('Your message has been sent successfully!')
-    e.target.reset()
-    setTimeout(() => setMsg(''), 5000)
   }
 
   return (
@@ -51,7 +45,13 @@ function Contact() {
                 <h2 className="title mb-0">Send us a Message</h2>
                 <p className="mb-30 mt-10">Fill-up The Form and Message us of your amazing question</p>
                 <div className="request-form">
-                  {msg && <div className="alert alert-success mb-3">{msg}</div>}
+                  <SubmissionModal 
+                    isOpen={showModal} 
+                    onClose={() => setShowModal(false)}
+                    title="Message Sent!"
+                    message="Thank you for reaching out to us. Your message has been sent successfully. We will get back to you shortly."
+                  />
+                  {errorMsg && <div className="alert alert-danger mb-3">{errorMsg}</div>}
                   <form onSubmit={handleSubmit} id="ajax_contact" className="form-horizontal">
                     <div className="form-group row">
                       <div className="col-md-6">
@@ -90,7 +90,9 @@ function Contact() {
                       </div>
                     </div>
                     <div className="submit-btn">
-                      <button id="submit" className="bz-primary-btn" type="submit">SUBMIT MESSAGE</button>
+                      <button id="submit" className="bz-primary-btn" type="submit" disabled={submitting}>
+                        {submitting ? 'SENDING...' : 'SUBMIT MESSAGE'}
+                      </button>
                     </div>
                   </form>
                 </div>

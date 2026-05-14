@@ -1,10 +1,45 @@
 import { Link, useLocation } from 'react-router-dom'
 import '../styles/header-fixes.css'
+import { useAuth } from '../hooks/useAuth'
+import { useAuthModal } from '../hooks/useAuthModal'
 
 function Header() {
   const { pathname } = useLocation()
   const isAbout = pathname === '/about'
   const isGovernmentSchemes = pathname === '/government-schemes' || pathname.startsWith('/government-schemes/')
+
+  const { user, isAuthenticated, logout } = useAuth()
+  const { openAuthModal } = useAuthModal()
+
+  const initials = (user?.name || user?.email || '?').trim().charAt(0).toUpperCase()
+  const displayName = user?.name || user?.email || ''
+
+  const authActions = isAuthenticated ? (
+    <div className="header-auth-user" title={displayName}>
+      <span className="header-auth-user__avatar">{initials}</span>
+      <span className="header-auth-user__name">{displayName.split('@')[0]}</span>
+      <button type="button" className="header-auth-user__logout" onClick={() => logout()}>
+        Logout
+      </button>
+    </div>
+  ) : (
+    <div className="header-auth-actions">
+      <button
+        type="button"
+        className="header-auth-btn header-auth-btn--login"
+        onClick={() => openAuthModal('login')}
+      >
+        Login
+      </button>
+      <button
+        type="button"
+        className="header-auth-btn header-auth-btn--signup"
+        onClick={() => openAuthModal('signup')}
+      >
+        Sign Up
+      </button>
+    </div>
+  )
 
   const toggleSidebar = (e) => {
     e.preventDefault()
@@ -24,7 +59,6 @@ function Header() {
       <li className={pathname === '/select-project' ? 'active' : ''}><Link to="/select-project">SELECT PROJECT</Link></li>
       <li className={pathname === '/business-associate' ? 'active' : ''}><Link to="/business-associate">BUSINESS ASSOCIATE</Link></li>
       <li className={pathname === '/become-investor' ? 'active' : ''}><Link to="/become-investor">BECOME INVESTOR</Link></li>
-      <li className={pathname === '/contact' ? 'active' : ''}><Link to="/contact">CONTACT US</Link></li>
     </ul>
   )
 
@@ -50,6 +84,7 @@ function Header() {
               <div className="header-right-wrap">
                 <div className="header-right">
                   <Link to="/contact" className="bz-primary-btn">CONTACT US</Link>
+                  {authActions}
                   <div className="sidebar-icon-2">
                     <button className="sidebar-trigger open" onClick={toggleSidebar}>
                       <span />
@@ -120,6 +155,7 @@ function Header() {
             <div className="header-right-wrap">
               <div className="header-right">
                 <Link to="/contact" className="header-btn">CONTACT US</Link>
+                {authActions}
                 <div className="sidebar-icon">
                   <button className="sidebar-trigger open" onClick={toggleSidebar}>
                     <span />

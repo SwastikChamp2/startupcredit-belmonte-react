@@ -1,20 +1,28 @@
 import { useState, useEffect } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import AdminShell from './AdminShell'
-import { mockServices } from './mockServices'
+import { fetchAdminService } from '../../services/adminDataApi'
 import './admin.css'
 
 function AdminServiceView() {
   const { serviceId } = useParams()
   const navigate = useNavigate()
   const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
-  
+
   const [service, setService] = useState(null)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    const foundService = mockServices.find(s => s.id === serviceId)
-    if (foundService) {
-      setService(foundService)
+    let cancelled = false
+    fetchAdminService(serviceId)
+      .then((data) => {
+        if (!cancelled) setService(data.service)
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err?.message || 'Could not load service.')
+      })
+    return () => {
+      cancelled = true
     }
   }, [serviceId])
 
@@ -24,8 +32,8 @@ function AdminServiceView() {
 
   if (!service) {
     return (
-      <AdminShell title="Service Details" subtitle="Loading...">
-        <div style={{ padding: '20px' }}>Loading or Service not found...</div>
+      <AdminShell title="Service Details" subtitle={error ? 'Error' : 'Loading...'}>
+        <div style={{ padding: '20px' }}>{error || 'Loading service from database…'}</div>
       </AdminShell>
     )
   }
@@ -74,7 +82,50 @@ function AdminServiceView() {
 
           <div className="admin-form-section" style={{ marginTop: '20px' }}>
             <h3>Content</h3>
-            <div dangerouslySetInnerHTML={{ __html: service.content || 'No content provided.' }} />
+            <div className="rich-text-render" dangerouslySetInnerHTML={{ __html: service.content || 'No content provided.' }} />
+          </div>
+
+          {service.ourApproach && (
+            <div className="admin-form-section" style={{ marginTop: '20px' }}>
+              <h3>Our Approach</h3>
+              <div className="rich-text-render" dangerouslySetInnerHTML={{ __html: service.ourApproach }} />
+            </div>
+          )}
+
+          {service.faqs && service.faqs.length > 0 && (
+            <div className="admin-form-section" style={{ marginTop: '20px' }}>
+              <h3>Frequently Asked Questions</h3>
+              <div className="admin-faqs-list">
+                {service.faqs.map((faq, i) => (
+                  <div key={i} className="admin-faq-item" style={{ marginBottom: '10px' }}>
+                    <p><strong>Q: {faq.question}</strong></p>
+                    <p>A: {faq.answer}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="admin-form-section" style={{ marginTop: '20px' }}>
+            <h3>Images</h3>
+            <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+              <div>
+                <p>Main Image</p>
+                <img src={service.image} alt="Main" style={{ width: '200px', borderRadius: '8px' }} />
+              </div>
+              {service.featureImage1 && (
+                <div>
+                  <p>Feature 1</p>
+                  <img src={service.featureImage1} alt="Feature 1" style={{ width: '150px', borderRadius: '8px' }} />
+                </div>
+              )}
+              {service.featureImage2 && (
+                <div>
+                  <p>Feature 2</p>
+                  <img src={service.featureImage2} alt="Feature 2" style={{ width: '150px', borderRadius: '8px' }} />
+                </div>
+              )}
+            </div>
           </div>
         </div>
 

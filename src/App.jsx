@@ -31,12 +31,14 @@ import AdminGovernmentSchemeManagement from './pages/admin/AdminGovernmentScheme
 import AdminGovernmentSchemeDetail from './pages/admin/AdminGovernmentSchemeDetail'
 import AdminServiceView from './pages/admin/AdminServiceView'
 import AdminGovernmentSchemeView from './pages/admin/AdminGovernmentSchemeView'
+import AdminMigration from './pages/admin/AdminMigration'
 
 function App() {
   return (
     <Routes>
       <Route path="/admin" element={<AdminRedirect />} />
       <Route path="/admin/login" element={<AdminLogin />} />
+      <Route path="/admin/migrate" element={<AdminMigration />} />
       <Route path="/admin/users" element={<AdminUsers />} />
       <Route path="/admin/project-inquiries" element={<AdminProjectInquiries />} />
       <Route path="/admin/projects" element={<AdminProjects />} />

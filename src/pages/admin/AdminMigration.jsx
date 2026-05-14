@@ -1,4 +1,9 @@
-export const schemesData = {
+import React, { useState } from 'react';
+import { adminDb as db } from '../../firebase';
+import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { uploadAdminFile } from '../../services/adminDataApi';
+
+const schemesData = {
   "national-agricultural-infra-financing": {
     "cover_image": "assets/img/bg-img/page-header-bg.jpg",
     "page_title": "National Agricultural Infra Financing - Startup Credit",
@@ -1102,4 +1107,214 @@ export const schemesData = {
       }
     ]
   }
-}
+};
+
+const sectionMapping = {
+  "national-agricultural-infra-financing": "government-funding",
+  "pmegp-scheme": "government-funding",
+  "cgtmse-scheme": "government-funding",
+  "startup-india": "government-funding",
+  "sisf-scheme": "government-funding",
+  "invoice-financing": "financing-options",
+  "working-capital": "financing-options",
+  "term-loans": "financing-options",
+  "equipment-financing": "financing-options",
+  "export-financing": "financing-options",
+  "angel-investment": "startup-funding",
+  "venture-capital": "startup-funding",
+  "seed-to-scale": "startup-funding",
+  "rural-industries": "special-categories",
+  "women-entrepreneurs": "special-categories",
+  "green-business": "special-categories"
+};
+
+const sectionTitles = {
+  "government-funding": "Government Funding",
+  "financing-options": "Financing Options",
+  "startup-funding": "Startup Funding",
+  "special-categories": "Special Categories"
+};
+
+const AdminMigration = () => {
+  const [status, setStatus] = useState('idle');
+  const [logs, setLogs] = useState([]);
+  const [progress, setProgress] = useState(0);
+  const [secretKey, setSecretKey] = useState('');
+
+  const addLog = (msg) => setLogs((prev) => [...prev, `${new Date().toLocaleTimeString()}: ${msg}`]);
+
+  const ensureSections = async () => {
+    addLog('Ensuring service sections exist...');
+    for (const [id, title] of Object.entries(sectionTitles)) {
+      await setDoc(doc(db, 'serviceSections', id), {
+        title,
+        sortOrder: Object.keys(sectionTitles).indexOf(id),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    }
+    addLog('Sections verified.');
+  };
+
+  const uploadLocalFile = async (path) => {
+    if (!path || path.startsWith('http')) return path;
+    try {
+      addLog(`Uploading local asset: ${path}`);
+      const response = await fetch(`/${path}`);
+      if (!response.ok) throw new Error(`Failed to fetch local file: ${path}`);
+      const blob = await response.blob();
+      const file = new File([blob], path.split('/').pop(), { type: blob.type });
+      const result = await uploadAdminFile(file);
+      return result.url;
+    } catch (err) {
+      addLog(`Error uploading ${path}: ${err.message}`);
+      return path; // Fallback to original
+    }
+  };
+
+  const runMigration = async () => {
+    if (secretKey !== 'startupcredit2026') {
+      alert('Invalid Secret Key. Please enter the correct key to proceed.');
+      return;
+    }
+    if (!window.confirm('This will migrate all service data to Firestore. Existing docs with same IDs will be updated. Continue?')) return;
+    
+    setStatus('running');
+    setLogs([]);
+    setProgress(0);
+
+    try {
+      await ensureSections();
+
+      const schemes = Object.entries(schemesData);
+      const total = schemes.length;
+
+      for (let i = 0; i < total; i++) {
+        const [slug, data] = schemes[i];
+        addLog(`--- Processing ${slug} ---`);
+
+        // Upload images
+        let mainImg = '', f1 = '', f2 = '';
+        try { mainImg = await uploadLocalFile(data.service_details_image); } catch (e) { addLog(`Warning: Image upload failed for ${slug} main img`); }
+        try { f1 = await uploadLocalFile(data.feature_image_1); } catch (e) { addLog(`Warning: Image upload failed for ${slug} f1`); }
+        try { f2 = await uploadLocalFile(data.feature_image_2); } catch (e) { addLog(`Warning: Image upload failed for ${slug} f2`); }
+
+        // Upload PDFs in download_files
+        const files = [];
+        if (data.download_files) {
+          for (const df of data.download_files) {
+            try {
+              const remoteUrl = await uploadLocalFile(df.href);
+              files.push({ title: df.title || 'Download', href: remoteUrl });
+            } catch (pdfErr) {
+              addLog(`Warning: Could not upload PDF ${df.title}. Keeping local path.`);
+              files.push({ title: df.title || 'Download', href: df.href });
+            }
+          }
+        }
+
+        const title = data.service_name || (data.page_title ? data.page_title.split(' - ')[0] : slug.replace(/-/g, ' '));
+
+        const payload = {
+          scheme: slug,
+          title: title || '',
+          description: (data.page_body || '').substring(0, 160) + '...',
+          image: mainImg || '',
+          alt: data.service_details_image_alt || title || slug,
+          sectionId: sectionMapping[slug] || 'uncategorized',
+          sortOrder: i,
+          status: 'Published',
+          highlights: data.feature_bullet_points || [],
+          content: data.page_body || '',
+          ourApproach: data.our_approach_body || '',
+          faqs: data.faqs || [],
+          featureImage1: f1 || '',
+          featureImage2: f2 || '',
+          seoTitle: data.page_title || title || '',
+          seoDescription: (data.page_body || '').substring(0, 160),
+          download_files: files,
+          other_services: data.other_services || [],
+          updatedAt: serverTimestamp()
+        };
+
+        // Deep sanitize to remove any remaining undefined
+        const cleanPayload = JSON.parse(JSON.stringify(payload));
+
+        await setDoc(doc(db, 'services', slug), cleanPayload, { merge: true });
+        addLog(`Successfully migrated: ${slug}`);
+        setProgress(Math.round(((i + 1) / total) * 100));
+      }
+
+      setStatus('completed');
+      addLog('Migration finished successfully!');
+    } catch (err) {
+      addLog(`CRITICAL ERROR: ${err.message}`);
+      setStatus('error');
+    }
+  };
+
+  return (
+    <div style={{ padding: '40px', maxWidth: '900px', margin: '0 auto', fontFamily: 'sans-serif' }}>
+      <h1>Data Migration Utility</h1>
+      <p>This tool will migrate legacy static service data to Firestore and upload local images to Cloudinary.</p>
+      
+      <div style={{ marginBottom: '20px', padding: '20px', backgroundColor: '#f5f5f5', borderRadius: '8px' }}>
+        <h3>Stats</h3>
+        <ul>
+          <li>Services to migrate: {Object.keys(schemesData).length}</li>
+          <li>Target Collections: <code>services</code>, <code>serviceSections</code></li>
+          <li>Status: <strong>{status.toUpperCase()}</strong></li>
+        </ul>
+        {status === 'running' && (
+          <div style={{ width: '100%', height: '10px', backgroundColor: '#ddd', borderRadius: '5px', overflow: 'hidden', marginTop: '10px' }}>
+            <div style={{ width: `${progress}%`, height: '100%', backgroundColor: '#007bff', transition: 'width 0.3s' }}></div>
+          </div>
+        )}
+      </div>
+
+      <div style={{ marginBottom: '20px' }}>
+        <label style={{ display: 'block', marginBottom: '5px' }}>Admin Access Key:</label>
+        <input 
+          type="password" 
+          value={secretKey} 
+          onChange={(e) => setSecretKey(e.target.value)} 
+          placeholder="Enter Secret Key"
+          style={{ padding: '10px', width: '200px', borderRadius: '5px', border: '1px solid #ccc' }}
+        />
+      </div>
+
+      <button 
+        onClick={runMigration} 
+        disabled={status === 'running'}
+        style={{
+          padding: '12px 24px',
+          fontSize: '16px',
+          backgroundColor: status === 'running' ? '#ccc' : '#007bff',
+          color: 'white',
+          border: 'none',
+          borderRadius: '5px',
+          cursor: 'pointer'
+        }}
+      >
+        {status === 'running' ? 'Migrating...' : 'Start Migration'}
+      </button>
+
+      <div style={{ marginTop: '30px' }}>
+        <h3>Migration Logs</h3>
+        <div style={{ 
+          height: '400px', 
+          overflowY: 'scroll', 
+          backgroundColor: '#1e1e1e', 
+          color: '#00ff00', 
+          padding: '15px', 
+          borderRadius: '5px',
+          fontSize: '13px',
+          lineHeight: '1.6'
+        }}>
+          {logs.length === 0 ? 'No logs yet...' : logs.map((log, i) => <div key={i}>{log}</div>)}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default AdminMigration;

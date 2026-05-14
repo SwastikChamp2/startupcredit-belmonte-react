@@ -71,22 +71,111 @@
   }
 }
 
-/* Tighten nav spacing to fit 7 items in one line */
+/* Keep header-right (auth + contact + sidebar) on the same row as the nav */
+.header .primary-header-inner {
+  flex-wrap: nowrap !important;
+  gap: 12px;
+}
+
+.header .primary-header-inner .header-menu-wrap {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.header .primary-header-inner .header-right-wrap {
+  flex: 0 0 auto;
+  margin-left: auto;
+}
+
+.header .primary-header-inner .header-right-wrap .header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Compact right-side CONTACT US pill */
+.header .primary-header-inner .header-right-wrap .header-right .header-btn {
+  margin-right: 0 !important;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+/* Tighten nav spacing so all items + auth buttons fit on one line */
+.header .primary-header-inner .header-menu-wrap > .mobile-menu-items > ul {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  justify-content: flex-start;
+}
+
 .header .primary-header-inner .header-menu-wrap > .mobile-menu-items > ul > li {
-  margin: 0 10px;
+  margin: 0 6px;
+  white-space: nowrap;
 }
 
 .header .primary-header-inner .header-menu-wrap > .mobile-menu-items > ul > li a {
-  font-size: 13px;
+  font-size: 11px;
 }
 
-@media (min-width: 1400px) {
+@media (min-width: 1280px) {
+  .header .primary-header-inner .header-menu-wrap > .mobile-menu-items > ul > li {
+    margin: 0 8px;
+  }
+
+  .header .primary-header-inner .header-menu-wrap > .mobile-menu-items > ul > li a {
+    font-size: 12px;
+  }
+}
+
+@media (min-width: 1440px) {
+  .header .primary-header-inner .header-menu-wrap > .mobile-menu-items > ul > li {
+    margin: 0 10px;
+  }
+
+  .header .primary-header-inner .header-menu-wrap > .mobile-menu-items > ul > li a {
+    font-size: 13px;
+  }
+}
+
+@media (min-width: 1600px) {
   .header .primary-header-inner .header-menu-wrap > .mobile-menu-items > ul > li {
     margin: 0 12px;
   }
 
   .header .primary-header-inner .header-menu-wrap > .mobile-menu-items > ul > li a {
     font-size: 14px;
+  }
+}
+
+/* Compact auth buttons in header */
+.header-auth-actions {
+  margin-right: 0 !important;
+  gap: 6px !important;
+}
+
+.header-auth-btn {
+  height: 34px !important;
+  padding: 0 12px !important;
+  font-size: 11px !important;
+  letter-spacing: 0.02em !important;
+}
+
+@media (min-width: 1440px) {
+  .header-auth-btn {
+    height: 36px !important;
+    padding: 0 14px !important;
+    font-size: 12px !important;
+  }
+}
+
+/* Mobile: re-enable wrapping so the hamburger drops to its natural place */
+@media (max-width: 992px) {
+  .header .primary-header-inner {
+    flex-wrap: wrap !important;
+  }
+
+  .header .primary-header-inner .header-menu-wrap > .mobile-menu-items > ul {
+    display: none;
   }
 }
 

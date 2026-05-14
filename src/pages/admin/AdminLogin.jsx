@@ -1,5 +1,10 @@
 import { useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+} from 'firebase/auth'
+import { adminAuth } from '../../firebase'
 import './admin-login.css'
 
 const SUPER_ADMIN = {
@@ -12,6 +17,7 @@ function AdminLogin() {
   const [form, setForm] = useState({ username: '', password: '' })
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
+  const [busy, setBusy] = useState(false)
 
   if (localStorage.getItem('startupCreditAdminAuth') === 'true') {
     return <Navigate to="/admin/users" replace />
@@ -23,19 +29,61 @@ function AdminLogin() {
     setError('')
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
 
+    // Step 1: hardcoded gate (legacy admin auth — keeps the existing UX).
     if (
-      form.username.trim() === SUPER_ADMIN.username &&
-      form.password === SUPER_ADMIN.password
+      form.username.trim() !== SUPER_ADMIN.username ||
+      form.password !== SUPER_ADMIN.password
     ) {
-      localStorage.setItem('startupCreditAdminAuth', 'true')
-      navigate('/admin/users', { replace: true })
+      setError('Invalid username or password.')
       return
     }
 
-    setError('Invalid username or password.')
+    setBusy(true)
+    setError('')
+
+    // Step 2: also sign in to Firebase so Firestore security rules see the
+    // admin as authenticated (required for onSnapshot listeners on admin pages).
+    // The first ever login auto-creates the admin's Firebase user.
+    try {
+      try {
+        await signInWithEmailAndPassword(adminAuth, SUPER_ADMIN.username, SUPER_ADMIN.password)
+      } catch (signInErr) {
+        if (
+          signInErr?.code === 'auth/user-not-found' ||
+          signInErr?.code === 'auth/invalid-credential'
+        ) {
+          // First-time setup — create the admin Firebase user, then continue.
+          await createUserWithEmailAndPassword(
+            adminAuth,
+            SUPER_ADMIN.username,
+            SUPER_ADMIN.password
+          )
+        } else {
+          throw signInErr
+        }
+      }
+
+      localStorage.setItem('startupCreditAdminAuth', 'true')
+      navigate('/admin/users', { replace: true })
+    } catch (err) {
+      // Surface a useful diagnostic — most common cause is that Email/Password
+      // sign-in isn't enabled in the Firebase console.
+      const code = err?.code || ''
+      if (code === 'auth/operation-not-allowed') {
+        setError(
+          'Email/Password sign-in is disabled in Firebase. Enable it in Firebase Console → Authentication → Sign-in method.'
+        )
+      } else if (code === 'auth/network-request-failed') {
+        setError('Network error reaching Firebase. Check your connection and try again.')
+      } else {
+        setError(err?.message || 'Could not sign in. Please try again.')
+      }
+    } finally {
+      setBusy(false)
+    }
   }
 
   return (
@@ -133,8 +181,8 @@ function AdminLogin() {
 
           {error && <p className="admin-login-error">{error}</p>}
 
-          <button className="admin-login-submit" type="submit">
-            Login
+          <button className="admin-login-submit" type="submit" disabled={busy}>
+            {busy ? 'Signing in…' : 'Login'}
           </button>
         </form>
 

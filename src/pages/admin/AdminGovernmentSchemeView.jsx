@@ -1,20 +1,28 @@
 import { useState, useEffect } from 'react'
 import { Navigate, useNavigate, useParams } from 'react-router-dom'
 import AdminShell from './AdminShell'
-import { mockGovernmentSchemes } from './mockGovernmentSchemes'
+import { fetchAdminScheme } from '../../services/adminDataApi'
 import './admin.css'
 
 function AdminGovernmentSchemeView() {
   const { schemeId } = useParams()
   const navigate = useNavigate()
   const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
-  
+
   const [scheme, setScheme] = useState(null)
+  const [error, setError] = useState('')
 
   useEffect(() => {
-    const foundScheme = mockGovernmentSchemes.find(s => s.id === schemeId)
-    if (foundScheme) {
-      setScheme(foundScheme)
+    let cancelled = false
+    fetchAdminScheme(schemeId)
+      .then((data) => {
+        if (!cancelled) setScheme(data.scheme)
+      })
+      .catch((err) => {
+        if (!cancelled) setError(err?.message || 'Could not load scheme.')
+      })
+    return () => {
+      cancelled = true
     }
   }, [schemeId])
 
@@ -24,8 +32,8 @@ function AdminGovernmentSchemeView() {
 
   if (!scheme) {
     return (
-      <AdminShell title="Government Scheme Details" subtitle="Loading...">
-        <div style={{ padding: '20px' }}>Loading or Scheme not found...</div>
+      <AdminShell title="Government Scheme Details" subtitle={error ? 'Error' : 'Loading...'}>
+        <div style={{ padding: '20px' }}>{error || 'Loading scheme from database…'}</div>
       </AdminShell>
     )
   }

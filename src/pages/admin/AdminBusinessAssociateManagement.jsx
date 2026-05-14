@@ -3,121 +3,21 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import AdminPagination from './AdminPagination'
 import useAdminPagination from './useAdminPagination'
-import { getAssociateFullName, getBusinessAssociates } from './mockBusinessAssociates'
+import { PROJECT_STATUSES } from './adminProjectData'
+import {
+  adaptBusinessAssociateForAdmin,
+  adaptProjectForAdmin,
+  getAssociateFullName,
+} from '../../services/adminDataApi'
+import { useFirestoreCollection } from '../../hooks/useFirestoreSnapshot'
 import './admin.css'
 
-const ASSOCIATE_PROJECTS = [
-  {
-    id: 'project-solar-panel',
-    associateEmail: 'vikram.kumar@example.com',
-    projectTitle: 'Solar Panel Manufacturing Unit',
-    nicCode: '29309',
-    sector: 'Manufacturing',
-    clientName: 'SunPower Solutions Pvt. Ltd.',
-    status: 'Project Filing In Progress',
-    lastUpdated: '12 May 2024',
-    turnover: 4500000,
-  },
-  {
-    id: 'ba-project-organic-fertilizer',
-    associateEmail: 'vikram.kumar@example.com',
-    projectTitle: 'Organic Fertilizer Unit',
-    nicCode: '23999',
-    sector: 'Agri & Allied',
-    clientName: 'GreenEarth Organics',
-    status: 'Awaiting Documents',
-    lastUpdated: '11 May 2024',
-    turnover: 1850000,
-  },
-  {
-    id: 'ba-project-cold-storage',
-    associateEmail: 'vikram.kumar@example.com',
-    projectTitle: 'Cold Storage Facility',
-    nicCode: '52102',
-    sector: 'Logistics',
-    clientName: 'FreshMart Retail Pvt. Ltd.',
-    status: 'Project Approved',
-    lastUpdated: '06 May 2024',
-    turnover: 7500000,
-  },
-  {
-    id: 'ba-project-charging',
-    associateEmail: 'vikram.kumar@example.com',
-    projectTitle: 'EV Charging Station Network',
-    nicCode: '35105',
-    sector: 'Infrastructure',
-    clientName: 'ChargeUp Mobility Pvt. Ltd.',
-    status: 'Project Filing Done',
-    lastUpdated: '05 May 2024',
-    turnover: 12000000,
-  },
-  {
-    id: 'ba-project-agri-export',
-    associateEmail: 'vikram.kumar@example.com',
-    projectTitle: 'Agri Produce Export Unit',
-    nicCode: '46309',
-    sector: 'Export',
-    clientName: 'Global Agri Exports',
-    status: 'In Discussion',
-    lastUpdated: '04 May 2024',
-    turnover: 3200000,
-  },
-  {
-    id: 'ba-project-textile',
-    associateEmail: 'pooja.shah@example.com',
-    projectTitle: 'Textile Processing Unit',
-    nicCode: '13129',
-    sector: 'Manufacturing',
-    clientName: 'Shah Textiles LLP',
-    status: 'Project Started',
-    lastUpdated: '08 May 2024',
-    turnover: 6200000,
-  },
-  {
-    id: 'ba-project-packaging',
-    associateEmail: 'pooja.shah@example.com',
-    projectTitle: 'Eco Packaging Plant',
-    nicCode: '17021',
-    sector: 'Manufacturing',
-    clientName: 'GreenPack Industries',
-    status: 'Project Completed',
-    lastUpdated: '02 May 2024',
-    turnover: 9000000,
-  },
-  {
-    id: 'ba-project-food',
-    associateEmail: 'pooja.shah@example.com',
-    projectTitle: 'Food Processing Expansion',
-    nicCode: '10309',
-    sector: 'Food Processing',
-    clientName: 'PureFoods India',
-    status: 'All Documents Sent',
-    lastUpdated: '30 April 2024',
-    turnover: 4100000,
-  },
-]
-
 function getStatusClass(status) {
-  return status.toLowerCase().replace(/[^a-z0-9]+/g, '-')
+  return String(status || '').toLowerCase().replace(/[^a-z0-9]+/g, '-')
 }
 
-function formatCurrency(amount) {
-  if (!amount || amount === 0) return '₹ 0'
-  
-  if (amount >= 10000000) {
-    return `₹ ${(amount / 10000000).toFixed(2)} Cr`
-  }
-
-  if (amount >= 100000) {
-    return `₹ ${(amount / 100000).toFixed(2)} L`
-  }
-
-  return `₹ ${amount.toLocaleString('en-IN')}`
-}
-
-function getAssociateProjects(associateEmail) {
-  return ASSOCIATE_PROJECTS.filter((project) => project.associateEmail === associateEmail)
-}
+const isCompleted = (status) => status === 'Project Completed'
+const isInquiryStage = (status) => status === 'Inquiry Pending'
 
 function AdminBusinessAssociateManagement() {
   const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
@@ -125,59 +25,117 @@ function AdminBusinessAssociateManagement() {
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('All Status')
   const [sectorFilter, setSectorFilter] = useState('All Sectors')
-  const [expandedAssociateId, setExpandedAssociateId] = useState('BA-003')
+  const [expandedAssociateId, setExpandedAssociateId] = useState('')
+
+  const {
+    items: allAssociates,
+    loading: loadingAssociates,
+    error: associatesError,
+  } = useFirestoreCollection('businessAssociateApplications', adaptBusinessAssociateForAdmin)
+  const {
+    items: allProjects,
+    loading: loadingProjects,
+    error: projectsError,
+  } = useFirestoreCollection('selectProjectSubmissions', adaptProjectForAdmin)
 
   const verifiedAssociates = useMemo(
-    () => getBusinessAssociates().filter((associate) => associate.status === 'Verified'),
-    [],
+    () => allAssociates.filter((a) => a.status === 'Verified'),
+    [allAssociates]
   )
-  const sectors = [...new Set(ASSOCIATE_PROJECTS.map((project) => project.sector))]
-  const projectStatuses = [...new Set(ASSOCIATE_PROJECTS.map((project) => project.status))]
+  const loading = loadingAssociates || loadingProjects
+  const errorMsg = associatesError?.message || projectsError?.message || ''
+
+  // Index projects by submitter email (lowercased) for fast lookup.
+  const projectsByEmail = useMemo(() => {
+    const map = new Map()
+    for (const project of allProjects) {
+      const email = (project.creatorEmail || '').toLowerCase()
+      if (!email) continue
+      if (!map.has(email)) map.set(email, [])
+      map.get(email).push(project)
+    }
+    return map
+  }, [allProjects])
+
+  // Build the list of all projects associated with verified BAs (so the
+  // header stats and the Sector filter only reflect BA-filed projects).
+  const associatedProjects = useMemo(() => {
+    const result = []
+    for (const associate of verifiedAssociates) {
+      const email = (associate.email || '').toLowerCase()
+      const matches = projectsByEmail.get(email) || []
+      for (const project of matches) {
+        result.push({ associate, project })
+      }
+    }
+    return result
+  }, [verifiedAssociates, projectsByEmail])
+
+  const sectors = useMemo(() => {
+    const set = new Set()
+    for (const { project } of associatedProjects) {
+      if (project.sectionName) set.add(project.sectionName)
+    }
+    return [...set].sort()
+  }, [associatedProjects])
 
   const associateRows = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
 
     return verifiedAssociates
       .map((associate) => {
-        const projects = getAssociateProjects(associate.email)
+        const fullName = getAssociateFullName(associate)
+        const email = (associate.email || '').toLowerCase()
+        const projects = projectsByEmail.get(email) || []
         const filteredProjects = projects.filter((project) => {
           const matchesStatus =
             statusFilter === 'All Status' || project.status === statusFilter
           const matchesSector =
-            sectorFilter === 'All Sectors' || project.sector === sectorFilter
-
+            sectorFilter === 'All Sectors' || project.sectionName === sectorFilter
           return matchesStatus && matchesSector
         })
-        const totalProjects = projects.length
-        const completed = projects.filter((project) => project.status === 'Project Completed').length
-        const inProgress = Math.max(totalProjects - completed, 0)
-        const totalTurnover = projects.reduce((sum, project) => sum + project.turnover, 0)
-        const fullName = getAssociateFullName(associate)
+
+        const completed = projects.filter((p) => isCompleted(p.status)).length
+        const inProgress = projects.filter(
+          (p) => !isCompleted(p.status) && !isInquiryStage(p.status)
+        ).length
+
         const matchesSearch =
           !query ||
           fullName.toLowerCase().includes(query) ||
-          associate.email.toLowerCase().includes(query) ||
-          associate.profession.toLowerCase().includes(query)
+          (associate.email || '').toLowerCase().includes(query) ||
+          (associate.profession || '').toLowerCase().includes(query)
+
+        // When the user has filters applied, only show associates whose
+        // projects survive the filter. Otherwise show all verified associates
+        // (they may simply have zero matching projects yet).
+        const filtersActive =
+          statusFilter !== 'All Status' || sectorFilter !== 'All Sectors'
+        const isVisible =
+          matchesSearch && (!filtersActive || filteredProjects.length > 0)
 
         return {
           associate,
           fullName,
           projects,
           filteredProjects,
-          totalProjects,
+          totalProjects: projects.length,
           inProgress,
           completed,
-          totalTurnover,
-          isVisible: matchesSearch && filteredProjects.length > 0,
+          isVisible,
         }
       })
       .filter((row) => row.isVisible)
-  }, [searchTerm, sectorFilter, statusFilter, verifiedAssociates])
+  }, [searchTerm, sectorFilter, statusFilter, verifiedAssociates, projectsByEmail])
   const associatesPagination = useAdminPagination(associateRows)
 
-  const allProjects = verifiedAssociates.flatMap((associate) => getAssociateProjects(associate.email))
-  const projectsCompleted = allProjects.filter((project) => project.status === 'Project Completed').length
-  const totalTurnover = allProjects.reduce((sum, project) => sum + project.turnover, 0)
+  const totalProjects = associatedProjects.length
+  const projectsCompleted = associatedProjects.filter(
+    ({ project }) => isCompleted(project.status)
+  ).length
+  const projectsInProgress = associatedProjects.filter(
+    ({ project }) => !isCompleted(project.status) && !isInquiryStage(project.status)
+  ).length
 
   if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />
@@ -186,8 +144,20 @@ function AdminBusinessAssociateManagement() {
   return (
     <AdminShell
       title="Business Associate Management"
-      subtitle="Manage verified business associates and track the projects they file through Startup Credit."
+      subtitle="Verified business associates and the projects they file through Startup Credit."
     >
+      {errorMsg && (
+        <div style={{ padding: '12px 18px', margin: '12px 0', background: '#fef2f2', color: '#b91c1c', borderRadius: 8, fontSize: 13 }}>
+          {errorMsg}
+        </div>
+      )}
+      {loading && (
+        <div className="admin-loader-container">
+          <div className="admin-loader"></div>
+          <span>Loading associates...</span>
+        </div>
+      )}
+
       <section className="admin-ba-stats">
         <article className="admin-ba-stat-card">
           <i className="fa-solid fa-users" aria-hidden="true"></i>
@@ -201,16 +171,16 @@ function AdminBusinessAssociateManagement() {
           <i className="fa-solid fa-folder-open" aria-hidden="true"></i>
           <div>
             <span>Total Projects</span>
-            <strong>{allProjects.length}</strong>
-            <p>All Projects</p>
+            <strong>{totalProjects}</strong>
+            <p>Filed by associates</p>
           </div>
         </article>
         <article className="admin-ba-stat-card warning">
           <i className="fa-solid fa-clock" aria-hidden="true"></i>
           <div>
             <span>Projects In Progress</span>
-            <strong>{allProjects.length - projectsCompleted}</strong>
-            <p>Active</p>
+            <strong>{projectsInProgress}</strong>
+            <p>Active workflow</p>
           </div>
         </article>
         <article className="admin-ba-stat-card success">
@@ -219,14 +189,6 @@ function AdminBusinessAssociateManagement() {
             <span>Projects Completed</span>
             <strong>{projectsCompleted}</strong>
             <p>Completed</p>
-          </div>
-        </article>
-        <article className="admin-ba-stat-card purple">
-          <i className="fa-solid fa-indian-rupee-sign" aria-hidden="true"></i>
-          <div>
-            <span>Total Turnover</span>
-            <strong>{formatCurrency(totalTurnover)}</strong>
-            <p>All Projects</p>
           </div>
         </article>
       </section>
@@ -251,7 +213,7 @@ function AdminBusinessAssociateManagement() {
             value={statusFilter}
           >
             <option value="All Status">All Project Status</option>
-            {projectStatuses.map((status) => (
+            {PROJECT_STATUSES.map((status) => (
               <option key={status} value={status}>{status}</option>
             ))}
           </select>
@@ -278,7 +240,6 @@ function AdminBusinessAssociateManagement() {
                 <th>Total Projects</th>
                 <th>In Progress</th>
                 <th>Completed</th>
-                <th>Total Turnover</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -288,7 +249,7 @@ function AdminBusinessAssociateManagement() {
 
                 return (
                   <tr className="admin-ba-associate-row" key={row.associate.id}>
-                    <td colSpan={7}>
+                    <td colSpan={6}>
                       <div className="admin-ba-row-summary">
                         <div className="admin-user-name">
                           <span>{row.associate.avatar}</span>
@@ -304,7 +265,6 @@ function AdminBusinessAssociateManagement() {
                         <strong className="admin-ba-metric-cell">{row.totalProjects}</strong>
                         <strong className="admin-ba-metric-cell">{row.inProgress}</strong>
                         <strong className="admin-ba-metric-cell">{row.completed}</strong>
-                        <strong className="admin-ba-turnover-cell">{formatCurrency(row.totalTurnover)}</strong>
                         <div className="admin-user-actions admin-ba-actions-cell">
                           <button
                             onClick={() => navigate(`/admin/business-associates/${row.associate.id}`, { state: { from: '/admin/business-associate-management' } })}
@@ -316,6 +276,7 @@ function AdminBusinessAssociateManagement() {
                             aria-label={isExpanded ? 'Collapse projects' : 'Expand projects'}
                             onClick={() => setExpandedAssociateId(isExpanded ? '' : row.associate.id)}
                             type="button"
+                            disabled={row.totalProjects === 0}
                           >
                             <i className={`fa-solid ${isExpanded ? 'fa-chevron-up' : 'fa-chevron-down'}`} aria-hidden="true"></i>
                           </button>
@@ -324,49 +285,57 @@ function AdminBusinessAssociateManagement() {
 
                       {isExpanded && (
                         <div className="admin-ba-project-panel">
-                          <h3>Projects ({row.filteredProjects.length})</h3>
-                          <div className="admin-ba-project-list">
-                            {row.filteredProjects.map((project) => (
-                              <article
-                                className="admin-ba-project-item"
-                                key={`${row.associate.id}-${project.id}`}
-                              >
-                                <div className="admin-ba-project-main">
-                                  <strong>{project.projectTitle}</strong>
-                                  <span>{project.clientName}</span>
-                                  <div className="admin-ba-project-meta">
-                                    <span>NIC {project.nicCode}</span>
-                                    <span>{project.sector}</span>
-                                  </div>
-                                </div>
-
-                                <div className="admin-ba-project-progress">
-                                  <span className={`admin-project-status ${getStatusClass(project.status)}`}>
-                                    {project.status}
-                                  </span>
-                                </div>
-
-                                <div className="admin-ba-project-facts">
-                                  <span>Last updated</span>
-                                  <strong>{project.lastUpdated}</strong>
-                                </div>
-
-                                <div className="admin-ba-project-facts">
-                                  <span>Turnover</span>
-                                  <strong>{formatCurrency(project.turnover)}</strong>
-                                </div>
-
-                                <button
-                                  aria-label={`View ${project.projectTitle}`}
-                                  className="admin-ba-icon-action"
-                                  onClick={() => navigate(`/admin/projects/${project.id}`, { state: { from: '/admin/business-associate-management' } })}
-                                  type="button"
+                          <h3>
+                            Projects ({row.filteredProjects.length}
+                            {row.filteredProjects.length !== row.totalProjects
+                              ? ` of ${row.totalProjects}`
+                              : ''})
+                          </h3>
+                          {row.filteredProjects.length === 0 ? (
+                            <p style={{ color: '#64748b', fontSize: 13 }}>
+                              {row.totalProjects === 0
+                                ? 'This associate has not filed any projects yet.'
+                                : 'No projects match the current filters.'}
+                            </p>
+                          ) : (
+                            <div className="admin-ba-project-list">
+                              {row.filteredProjects.map((project) => (
+                                <article
+                                  className="admin-ba-project-item"
+                                  key={`${row.associate.id}-${project.id}`}
                                 >
-                                  <i className="fa-regular fa-eye" aria-hidden="true"></i>
-                                </button>
-                              </article>
-                            ))}
-                          </div>
+                                  <div className="admin-ba-project-main">
+                                    <strong>{project.projectTitle}</strong>
+                                    <span>{project.clientName || project.creatorName || '—'}</span>
+                                    <div className="admin-ba-project-meta">
+                                      {project.nicCode && <span>NIC {project.nicCode}</span>}
+                                      {project.sectionName && <span>{project.sectionName}</span>}
+                                    </div>
+                                  </div>
+
+                                  <div className="admin-ba-project-progress">
+                                    <span className={`admin-project-status ${getStatusClass(project.status)}`}>
+                                      {project.status}
+                                    </span>
+                                  </div>
+
+                                  <div className="admin-ba-project-facts">
+                                    <span>Last updated</span>
+                                    <strong>{project.lastUpdated || project.createdAt || '—'}</strong>
+                                  </div>
+
+                                  <button
+                                    aria-label={`View ${project.projectTitle}`}
+                                    className="admin-ba-icon-action"
+                                    onClick={() => navigate(`/admin/projects/${project.id}`, { state: { from: '/admin/business-associate-management' } })}
+                                    type="button"
+                                  >
+                                    <i className="fa-regular fa-eye" aria-hidden="true"></i>
+                                  </button>
+                                </article>
+                              ))}
+                            </div>
+                          )}
                         </div>
                       )}
                     </td>
@@ -376,11 +345,19 @@ function AdminBusinessAssociateManagement() {
             </tbody>
           </table>
 
-          {associateRows.length === 0 && (
+          {!loading && associateRows.length === 0 && (
             <div className="admin-users-empty">
               <i className="fa-regular fa-address-card" aria-hidden="true"></i>
-              <strong>No verified associates found</strong>
-              <span>Try changing the search or project filters.</span>
+              <strong>
+                {verifiedAssociates.length === 0
+                  ? 'No verified associates yet'
+                  : 'No associates match the current filters'}
+              </strong>
+              <span>
+                {verifiedAssociates.length === 0
+                  ? 'Verify an associate from Business Associate Inquiries to see them here.'
+                  : 'Try clearing the search or status / sector filters.'}
+              </span>
             </div>
           )}
         </div>

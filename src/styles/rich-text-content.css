@@ -1,0 +1,64 @@
+.rich-text-render {
+  line-height: 1.8;
+  color: #4b5563; /* Default text color */
+}
+
+.rich-text-render h1, 
+.rich-text-render h2, 
+.rich-text-render h3, 
+.rich-text-render h4, 
+.rich-text-render h5, 
+.rich-text-render h6 {
+  color: #1f2937;
+  margin-top: 1.5rem;
+  margin-bottom: 0.75rem;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.rich-text-render h1 { font-size: 2.25rem; }
+.rich-text-render h2 { font-size: 1.875rem; }
+.rich-text-render h3 { font-size: 1.5rem; }
+.rich-text-render h4 { font-size: 1.25rem; }
+
+.rich-text-render p {
+  margin-bottom: 1.25rem;
+}
+
+.rich-text-render ul, 
+.rich-text-render ol {
+  margin-bottom: 1.25rem;
+  padding-left: 2rem;
+}
+
+.rich-text-render ul {
+  list-style-type: disc !important;
+}
+
+.rich-text-render ol {
+  list-style-type: decimal !important;
+}
+
+.rich-text-render li {
+  margin-bottom: 0.5rem;
+}
+
+.rich-text-render b, 
+.rich-text-render strong {
+  font-weight: 700;
+}
+
+.rich-text-render i, 
+.rich-text-render em {
+  font-style: italic;
+}
+
+.rich-text-render u {
+  text-decoration: underline;
+}
+
+.rich-text-render br {
+  display: block;
+  content: "";
+  margin-top: 0.5rem;
+}

@@ -3,93 +3,78 @@ import { Navigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import AdminPagination from './AdminPagination'
 import useAdminPagination from './useAdminPagination'
+import {
+  adaptContactInquiryForAdmin,
+  deleteAdminContactInquiry,
+} from '../../services/adminDataApi'
+import { useFirestoreCollection } from '../../hooks/useFirestoreSnapshot'
 import './admin.css'
 
-const CONTACT_INQUIRIES_STORAGE_KEY = 'startupCreditContactInquiries'
-
-const SEEDED_CONTACT_INQUIRIES = [
-  {
-    id: 'contact-amit-sharma',
-    name: 'Amit Sharma',
-    email: 'amit.sharma@example.com',
-    mobile: '+91 98765 43210',
-    submittedAt: '12 May 2024, 10:30 AM',
-    subject: 'Project funding guidance',
-    message: 'I want to understand which government schemes are suitable for my new manufacturing project.',
-  },
-  {
-    id: 'contact-neha-desai',
-    name: 'Neha Desai',
-    email: 'neha.desai@example.com',
-    mobile: '+91 91234 56789',
-    submittedAt: '11 May 2024, 04:15 PM',
-    subject: 'Document support',
-    message: 'Please share the document checklist required before submitting a project inquiry on Startup Credit.',
-  },
-  {
-    id: 'contact-rajesh-kulkarni',
-    name: 'Rajesh Kulkarni',
-    email: 'rajesh.kulkarni@example.com',
-    mobile: '+91 99887 66554',
-    submittedAt: '10 May 2024, 11:20 AM',
-    subject: 'Business associate query',
-    message: 'I am interested in becoming a business associate and would like to know the verification process.',
-  },
-  {
-    id: 'contact-priya-menon',
-    name: 'Priya Menon',
-    email: 'priya.menon@example.com',
-    mobile: '+91 90909 09090',
-    submittedAt: '09 May 2024, 09:45 AM',
-    subject: 'Investor information',
-    message: 'I would like to know how investors can review active startup financing opportunities on your platform.',
-  },
-]
-
-function readStoredContactInquiries() {
-  try {
-    return JSON.parse(localStorage.getItem(CONTACT_INQUIRIES_STORAGE_KEY) || '[]')
-  } catch {
-    return []
-  }
-}
-
 function getInitials(name) {
-  return name
+  return String(name || '')
     .split(' ')
     .map((part) => part[0])
+    .filter(Boolean)
     .join('')
     .slice(0, 2)
-    .toUpperCase()
+    .toUpperCase() || 'NA'
 }
 
 function AdminContactManagement() {
   const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
+  const [errorMsg, setErrorMsg] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedInquiry, setSelectedInquiry] = useState(null)
-  const inquiries = useMemo(
-    () => [...readStoredContactInquiries(), ...SEEDED_CONTACT_INQUIRIES],
-    [],
+  const [inquiryToDelete, setInquiryToDelete] = useState(null)
+  const [actionPending, setActionPending] = useState(null)
+  const [sortOrder, setSortOrder] = useState('desc')
+
+  const { items: inquiries, loading, error: liveError } = useFirestoreCollection(
+    'contactInquiries',
+    adaptContactInquiryForAdmin
   )
+
+  const parseDate = (dateStr) => {
+    if (!dateStr || dateStr === '—') return 0
+    return new Date(dateStr).getTime() || 0
+  }
 
   const filteredInquiries = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
+    let result = query 
+      ? inquiries.filter(
+          (inquiry) =>
+            (inquiry.name || '').toLowerCase().includes(query) ||
+            (inquiry.email || '').toLowerCase().includes(query) ||
+            (inquiry.subject || '').toLowerCase().includes(query),
+        )
+      : inquiries
 
-    if (!query) {
-      return inquiries
-    }
-
-    return inquiries.filter(
-      (inquiry) =>
-        inquiry.name.toLowerCase().includes(query) ||
-        inquiry.email.toLowerCase().includes(query) ||
-        inquiry.subject.toLowerCase().includes(query),
-    )
-  }, [inquiries, searchTerm])
+    return result.sort((a, b) => {
+      const timeA = parseDate(a.submittedAt)
+      const timeB = parseDate(b.submittedAt)
+      return sortOrder === 'desc' ? timeB - timeA : timeA - timeB
+    })
+  }, [inquiries, searchTerm, sortOrder])
   const inquiriesPagination = useAdminPagination(filteredInquiries)
 
   if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />
+  }
+
+  const confirmDelete = async () => {
+    if (!inquiryToDelete) return
+    setActionPending(inquiryToDelete.id)
+    setErrorMsg('')
+    try {
+      await deleteAdminContactInquiry(inquiryToDelete.id)
+      setInquiryToDelete(null)
+      // Live snapshot will drop the row automatically.
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not delete inquiry.')
+    } finally {
+      setActionPending(null)
+    }
   }
 
   return (
@@ -98,6 +83,18 @@ function AdminContactManagement() {
       subtitle="View inquiries submitted through the website contact form."
     >
       <section className="admin-users-card">
+        {(errorMsg || liveError) && (
+          <div style={{ padding: '12px 18px', margin: '12px 18px 0', background: '#fef2f2', color: '#b91c1c', borderRadius: 8, fontSize: 13 }}>
+            {errorMsg || liveError?.message || 'Could not load contact inquiries.'}
+          </div>
+        )}
+        {loading && (
+          <div className="admin-loader-container">
+            <div className="admin-loader"></div>
+            <span>Loading contact inquiries...</span>
+          </div>
+        )}
+
         <div className="admin-users-toolbar">
           <label className="admin-users-search admin-contact-search">
             <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
@@ -117,7 +114,17 @@ function AdminContactManagement() {
               <tr>
                 <th>Name</th>
                 <th>Email</th>
-                <th>Time</th>
+                <th>
+                  Time
+                  <button
+                    onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px' }}
+                    aria-label="Toggle sort order"
+                    type="button"
+                  >
+                    <i className={`fa-solid fa-arrow-${sortOrder === 'desc' ? 'down' : 'up'}`} aria-hidden="true" style={{ color: 'var(--text-light)' }}></i>
+                  </button>
+                </th>
                 <th>Subject</th>
                 <th>Actions</th>
               </tr>
@@ -141,6 +148,14 @@ function AdminContactManagement() {
                       <button onClick={() => setSelectedInquiry(inquiry)} type="button">
                         View
                       </button>
+                      <button
+                        className="danger"
+                        disabled={actionPending === inquiry.id}
+                        onClick={() => setInquiryToDelete(inquiry)}
+                        type="button"
+                      >
+                        Delete
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -148,11 +163,15 @@ function AdminContactManagement() {
             </tbody>
           </table>
 
-          {filteredInquiries.length === 0 && (
+          {!loading && filteredInquiries.length === 0 && (
             <div className="admin-users-empty">
               <i className="fa-regular fa-envelope" aria-hidden="true"></i>
               <strong>No contact inquiries found</strong>
-              <span>Try searching with another name, email, or subject.</span>
+              <span>
+                {inquiries.length === 0
+                  ? 'No messages have been received yet.'
+                  : 'Try searching with another name, email, or subject.'}
+              </span>
             </div>
           )}
         </div>
@@ -199,6 +218,35 @@ function AdminContactManagement() {
                 <strong>Message</strong>
                 <p>{selectedInquiry.message || 'No message provided.'}</p>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {inquiryToDelete && (
+        <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div style={{ background: '#fff', padding: 24, borderRadius: 8, maxWidth: 420, width: '90%', boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)' }}>
+            <h3 style={{ margin: '0 0 12px 0', fontSize: 18, color: '#0f172a' }}>Delete inquiry</h3>
+            <p style={{ margin: '0 0 24px 0', color: '#475569', fontSize: 14, lineHeight: 1.5 }}>
+              Are you sure you want to delete this contact inquiry from <strong>{inquiryToDelete.name || inquiryToDelete.email || 'this user'}</strong>?
+              This action cannot be undone.
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+              <button
+                onClick={() => setInquiryToDelete(null)}
+                style={{ padding: '8px 16px', background: '#f1f5f9', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#475569', fontWeight: 500 }}
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={confirmDelete}
+                disabled={actionPending === inquiryToDelete.id}
+                style={{ padding: '8px 16px', background: '#ef4444', border: 'none', borderRadius: 6, cursor: 'pointer', color: '#fff', fontWeight: 500 }}
+                type="button"
+              >
+                {actionPending === inquiryToDelete.id ? 'Deleting…' : 'Delete'}
+              </button>
             </div>
           </div>
         </div>

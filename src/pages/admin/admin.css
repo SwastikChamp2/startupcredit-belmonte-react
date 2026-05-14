@@ -18,12 +18,37 @@
 }
 
 .admin-sidebar-logo {
-  padding: 0 12px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 8px 24px 12px;
 }
 
 .admin-sidebar-logo img {
   width: 176px;
   height: auto;
+  min-width: 0;
+}
+
+.admin-sidebar-close {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  flex: 0 0 34px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: 7px;
+  color: #ffffff;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.admin-sidebar-close:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .admin-nav {
@@ -188,6 +213,33 @@
 .admin-profile span:not(.admin-avatar) {
   color: #7b879b;
   font-size: 13px;
+}
+
+.admin-loader-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 40px;
+  text-align: center;
+  color: #64748b;
+  gap: 20px;
+}
+
+.admin-loader {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e2e8f0;
+  border-bottom-color: #1769e8;
+  border-radius: 50%;
+  display: inline-block;
+  box-sizing: border-box;
+  animation: rotation 1s linear infinite;
+}
+
+@keyframes rotation {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 .admin-logout-button {
@@ -424,13 +476,15 @@
 .admin-project-cell {
   display: grid;
   gap: 4px;
-  max-width: 360px;
-  white-space: normal;
+  max-width: 700px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .admin-inquiries-table th:first-child,
 .admin-inquiries-table td:first-child {
-  width: 30%;
+  width: 50%;
 }
 
 .admin-inquiries-table th:nth-child(2),
@@ -473,12 +527,14 @@
   background: #f0eaff;
 }
 
-.admin-inquiry-status.pending {
+.admin-inquiry-status.pending,
+.admin-inquiry-status.inquiry-pending {
   color: #bd6500;
   background: #fff1d9;
 }
 
-.admin-inquiry-status.accepted {
+.admin-inquiry-status.accepted,
+.admin-inquiry-status.inquiry-accepted {
   color: #0f8e55;
   background: #dff8eb;
 }
@@ -703,17 +759,20 @@
   text-align: center;
 }
 
-.admin-investor-status.accepted {
+.admin-investor-status.accepted,
+.admin-investor-status.verified {
   color: #0f8e55;
   background: #dff8eb;
 }
 
-.admin-investor-status.pending {
+.admin-investor-status.pending,
+.admin-investor-status.verification-in-progress {
   color: #bd6500;
   background: #fff1d9;
 }
 
-.admin-investor-status.submitted {
+.admin-investor-status.submitted,
+.admin-investor-status.inquiry-submitted {
   color: #1769e8;
   background: #edf4ff;
 }
@@ -774,6 +833,223 @@
 .admin-project-status.project-filing-done {
   color: #1769e8;
   background: #edf4ff;
+}
+
+select.admin-project-status {
+  border: 1px solid #d7e0ec;
+}
+
+select.admin-project-status option {
+  color: #34415a;
+  background: #ffffff !important;
+}
+
+.admin-project-status-dropdown {
+  position: relative;
+  display: inline-flex;
+  width: 230px;
+  max-width: 100%;
+}
+
+.admin-project-status-trigger {
+  width: 100%;
+  gap: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  appearance: none;
+  transition: box-shadow 0.18s ease, transform 0.18s ease, filter 0.18s ease;
+}
+
+.admin-project-status-trigger:hover {
+  filter: brightness(0.97);
+  box-shadow: 0 2px 6px rgba(18, 39, 75, 0.08);
+}
+
+.admin-project-status-trigger:focus-visible {
+  outline: 2px solid #1769e8;
+  outline-offset: 2px;
+}
+
+.admin-project-status-trigger[aria-expanded="true"] {
+  box-shadow: 0 4px 12px rgba(18, 39, 75, 0.12);
+}
+
+.admin-project-status-trigger[title*="locked"] {
+  cursor: not-allowed;
+  opacity: 0.85;
+}
+
+.admin-project-status-trigger[title*="locked"]:hover {
+  filter: none;
+  box-shadow: none;
+}
+
+.admin-project-status-trigger span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-project-status-trigger i {
+  margin-left: auto;
+  font-size: 11px;
+  transition: transform 0.18s ease;
+}
+
+.admin-project-status-menu {
+  position: fixed;
+  z-index: 10001;
+  max-height: min(460px, calc(100vh - 24px));
+  overflow-y: auto;
+  padding: 6px;
+  border: 1px solid #d7e0ec;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 18px 38px rgba(18, 39, 75, 0.16), 0 4px 10px rgba(18, 39, 75, 0.06);
+  animation: adminStatusMenuIn 0.16s ease-out;
+}
+
+@keyframes adminStatusMenuIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.admin-project-status-menu::-webkit-scrollbar {
+  width: 8px;
+}
+
+.admin-project-status-menu::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.admin-project-status-menu::-webkit-scrollbar-thumb {
+  background: #d7e0ec;
+  border-radius: 6px;
+}
+
+.admin-project-status-menu::-webkit-scrollbar-thumb:hover {
+  background: #b8c4d6;
+}
+
+.admin-project-status-menu button {
+  position: relative;
+  display: flex;
+  width: 100%;
+  min-height: 36px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 10px;
+  margin: 2px 0;
+  border: 0;
+  padding: 9px 12px 9px 14px;
+  border-radius: 7px;
+  color: #34415a;
+  background: #ffffff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-align: left;
+  white-space: normal;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.admin-project-status-menu button::before {
+  content: '';
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #cdd6e4;
+}
+
+.admin-project-status-menu button:hover {
+  color: #12274b;
+  background: #f1f6ff;
+}
+
+.admin-project-status-menu button:focus-visible {
+  outline: 2px solid #1769e8;
+  outline-offset: -2px;
+}
+
+.admin-project-status-menu button.active {
+  color: #1769e8;
+  background: #edf4ff;
+  font-weight: 700;
+}
+
+.admin-project-status-menu button.active::after {
+  content: '\f00c';
+  margin-left: auto;
+  font-family: 'Font Awesome 6 Free', 'Font Awesome 5 Free', sans-serif;
+  font-weight: 900;
+  font-size: 11px;
+  color: #1769e8;
+}
+
+.admin-project-status-menu button.project-started::before,
+.admin-project-status-menu button.all-documents-sent::before,
+.admin-project-status-menu button.project-approved::before,
+.admin-project-status-menu button.project-completed::before {
+  background: #16a34a;
+}
+
+.admin-project-status-menu button.awaiting-documents::before,
+.admin-project-status-menu button.project-approval-pending::before,
+.admin-project-status-menu button.post-approval-formalities-pending::before {
+  background: #f59e0b;
+}
+
+.admin-project-status-menu button.document-correction-update::before,
+.admin-project-status-menu button.project-modification-requested::before {
+  background: #dc2626;
+}
+
+.admin-project-status-menu button.project-filing-in-progress::before {
+  background: #6d38d9;
+}
+
+.admin-project-status-menu button.in-discussion::before,
+.admin-project-status-menu button.project-filing-done::before,
+.admin-project-status-menu button.inquiry-submitted::before {
+  background: #1769e8;
+}
+
+.admin-project-status-menu button.verified::before {
+  background: #16a34a;
+}
+
+.admin-project-status-menu button.verification-in-progress::before {
+  background: #f59e0b;
+}
+
+.admin-project-status-menu button.rejected::before {
+  background: #dc2626;
+}
+
+.admin-project-status-trigger.admin-investor-status {
+  min-width: 112px;
+}
+
+.admin-project-status-menu button.inquiry-pending::before {
+  background: #f59e0b;
+}
+
+.admin-project-status-menu button.inquiry-accepted::before {
+  background: #16a34a;
+}
+
+.admin-project-status-trigger.admin-inquiry-status {
+  min-width: 118px;
 }
 
 .admin-detail-page-actions {
@@ -1191,7 +1467,7 @@
 
 .admin-users-table th,
 .admin-users-table td {
-  padding: 17px 20px;
+  padding: 24px 20px;
   border-bottom: 1px solid #e9eef6;
   text-align: left;
   vertical-align: middle;
@@ -1390,7 +1666,7 @@
 }
 
 .admin-step:last-child {
-  flex: none;
+  /* Removed flex: none to ensure equal widths for line alignment */
 }
 
 .admin-step-content {
@@ -1457,7 +1733,7 @@
   color: #ffffff;
 }
 
-.admin-step.completed .admin-step-line {
+.admin-step.line-completed .admin-step-line {
   background: #1769e8;
 }
 
@@ -1468,6 +1744,30 @@
 .admin-step-circle:hover {
   transform: scale(1.1);
   border-color: #1769e8;
+}
+
+.admin-step-circle:disabled {
+  cursor: not-allowed;
+}
+
+.admin-step-circle:disabled:hover {
+  transform: none;
+}
+
+.admin-detail-workflow-card {
+  margin: 18px 22px 0;
+  border: 1px solid #e1e8f2;
+  border-radius: 8px;
+  box-shadow: none;
+}
+
+.admin-detail-workflow-card .admin-stepper {
+  overflow-x: auto;
+  padding: 0 4px 20px;
+}
+
+.admin-detail-workflow-card .admin-step {
+  min-width: 150px;
 }
 
 
@@ -1693,11 +1993,19 @@
 .admin-service-cell-info strong {
   color: #101b35;
   font-size: 14px;
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .admin-service-cell-info span {
   color: #657287;
   font-size: 12px;
+  max-width: 320px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .admin-service-cat-badge {
@@ -1806,6 +2114,16 @@
 .admin-category-item span {
   font-weight: 600;
   color: #34415a;
+}
+
+.admin-category-item input {
+  min-width: 0;
+  height: 34px;
+  border: 1px solid #d7e0ec;
+  border-radius: 7px;
+  padding: 0 10px;
+  color: #34415a;
+  font: inherit;
 }
 
 .admin-category-actions {
@@ -2325,4 +2643,132 @@
   display: flex;
   flex-direction: column;
   gap: 30px;
+}
+
+/* Service Creation Extended Features */
+.admin-images-grid {
+  display: grid;
+  gap: 20px;
+}
+
+.small-preview {
+  max-width: 220px !important;
+  min-height: 140px !important;
+}
+
+.small-preview .image-preview {
+  max-height: 120px !important;
+}
+
+.admin-faqs-list {
+  display: grid;
+  gap: 20px;
+  margin-top: 15px;
+}
+
+.admin-faq-item {
+  padding: 20px;
+  border: 1px solid #e1e8f2;
+  border-radius: 8px;
+  background: #f8fafc;
+}
+
+.admin-faq-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.admin-faq-header span {
+  font-weight: 700;
+  color: #1e293b;
+  font-size: 14px;
+}
+
+.admin-faq-input {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  margin-bottom: 10px;
+  font-size: 14px;
+}
+
+.admin-faq-textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 14px;
+  resize: vertical;
+  background: #fff;
+}
+
+.remove-item-btn {
+  background: transparent;
+  border: none;
+  color: #ef4444;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px;
+}
+
+/* Sources Tab Enhancements */
+.admin-source-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 20px;
+  padding: 24px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.admin-source-item:hover {
+  border-color: #1769e8;
+  box-shadow: 0 4px 12px rgba(23, 105, 232, 0.08);
+}
+
+.admin-source-type-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #64748b;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.admin-source-item[data-type="file"] .admin-source-type-icon {
+  background: #fff1f2;
+  color: #e11d48;
+}
+
+.admin-source-item[data-type="link"] .admin-source-type-icon {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.admin-source-main {
+  flex: 1;
+  display: grid;
+  gap: 16px;
+}
+
+.admin-source-fields {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 16px;
+}
+
+.admin-source-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }

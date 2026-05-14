@@ -2,12 +2,17 @@ import { useMemo, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import AdminPagination from './AdminPagination'
+import AdminStatusDropdown from './AdminStatusDropdown'
 import useAdminPagination from './useAdminPagination'
-import { PROJECT_STATUSES, getProjects, updateProject } from './adminProjectData'
+import { PROJECT_STATUSES } from './adminProjectData'
+import {
+  adaptProjectForAdmin,
+  updateAdminProjectSubmission,
+} from '../../services/adminDataApi'
+import { useFirestoreCollection } from '../../hooks/useFirestoreSnapshot'
 
-function getStatusClass(status) {
-  return status.toLowerCase().replace(/[^a-z0-9]+/g, '-')
-}
+// Submissions still in inquiry phase don't appear in the project workflow.
+const INQUIRY_STATUSES = new Set(['Inquiry Pending'])
 
 function isProjectCompleted(status) {
   return status === 'Project Completed'
@@ -33,11 +38,23 @@ function createHistoryEntry(actionDescription) {
 function AdminProjects() {
   const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
   const navigate = useNavigate()
-  const [projects, setProjects] = useState(() => getProjects())
+  const [errorMsg, setErrorMsg] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
   const [sortOrder, setSortOrder] = useState('desc')
   const [lockedStatusProject, setLockedStatusProject] = useState(null)
+  const [openStatusProjectId, setOpenStatusProjectId] = useState(null)
+  const [pendingCompletion, setPendingCompletion] = useState(null)
+
+  // Live subscription — every patch from the API propagates instantly.
+  const { items, loading, error: liveError } = useFirestoreCollection(
+    'selectProjectSubmissions',
+    adaptProjectForAdmin
+  )
+  const projects = useMemo(
+    () => items.filter((row) => !INQUIRY_STATUSES.has(row.status)),
+    [items]
+  )
 
   const parseDate = (dateStr) => {
     if (!dateStr || dateStr === 'Today' || dateStr === '-') return Number.MAX_SAFE_INTEGER
@@ -71,24 +88,53 @@ function AdminProjects() {
     return <Navigate to="/admin/login" replace />
   }
 
+  const applyStatusChange = async (projectId, newStatus) => {
+    const project = projects.find((p) => p.id === projectId)
+    const newHistory = [
+      ...(project?.history || []),
+      createHistoryEntry(`changed status to "${newStatus}" from the list view`),
+    ]
+    setOpenStatusProjectId(null)
+    setErrorMsg('')
+    try {
+      await updateAdminProjectSubmission(projectId, {
+        status: newStatus,
+        history: newHistory,
+      })
+      // No reload — the onSnapshot listener picks up the change live.
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not update status.')
+    }
+  }
+
   const handleStatusChange = (projectId, newStatus) => {
     const project = projects.find((currentProject) => currentProject.id === projectId)
 
     if (!project || isProjectCompleted(project.status)) {
       setLockedStatusProject(project || null)
+      setOpenStatusProjectId(null)
       return
     }
 
-    updateProject(projectId, (p) => ({
-      ...p,
-      status: newStatus,
-      lastUpdated: 'Today',
-      history: [
-        ...(p.history || []),
-        createHistoryEntry(`changed status to "${newStatus}" from the list view`),
-      ],
-    }))
-    setProjects(getProjects())
+    if (project.status === newStatus) {
+      setOpenStatusProjectId(null)
+      return
+    }
+
+    if (isProjectCompleted(newStatus)) {
+      setPendingCompletion(project)
+      setOpenStatusProjectId(null)
+      return
+    }
+
+    applyStatusChange(projectId, newStatus)
+  }
+
+  const confirmCompletion = () => {
+    if (pendingCompletion) {
+      applyStatusChange(pendingCompletion.id, 'Project Completed')
+    }
+    setPendingCompletion(null)
   }
 
   return (
@@ -97,6 +143,17 @@ function AdminProjects() {
       subtitle="Manage active client projects and track their progress."
     >
       <section className="admin-users-card admin-projects-card">
+        {(errorMsg || liveError) && (
+          <div style={{ padding: '12px 18px', margin: '12px 18px 0', background: '#fef2f2', color: '#b91c1c', borderRadius: 8, fontSize: 13 }}>
+            {errorMsg || liveError?.message || 'Could not load projects.'}
+          </div>
+        )}
+        {loading && (
+          <div className="admin-loader-container">
+            <div className="admin-loader"></div>
+            <span>Loading projects...</span>
+          </div>
+        )}
         <div className="admin-users-toolbar admin-projects-toolbar">
           <label className="admin-users-search admin-inquiry-search">
             <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
@@ -149,9 +206,9 @@ function AdminProjects() {
                 <tr key={project.id}>
                   <td>
                     <div className="admin-project-cell">
-                      {project.submittedByType === 'Business Associate' ? (
+                      {project.submittedByType === 'Associate' ? (
                         <>
-                          <span style={{ color: 'var(--primary)', fontSize: '0.75rem', fontWeight: 'bold', textTransform: 'uppercase' }}>Business Associate</span>
+                          <span style={{ color: 'var(--primary)', fontSize: '0.75rem', fontWeight: 'bold', textTransform: 'uppercase' }}>Associate</span>
                           <strong>{project.associateName}</strong>
                           <span>{project.associateEmail}</span>
                         </>
@@ -173,17 +230,21 @@ function AdminProjects() {
                     </div>
                   </td>
                   <td>
-                    <select
-                      className={`admin-project-status ${getStatusClass(project.status)}`}
-                      value={project.status}
-                      onChange={(e) => handleStatusChange(project.id, e.target.value)}
-                      title={isProjectCompleted(project.status) ? 'Completed projects are locked' : 'Update project status'}
-                      style={{ border: 'none', cursor: isProjectCompleted(project.status) ? 'not-allowed' : 'pointer', appearance: 'auto' }}
-                    >
-                      {PROJECT_STATUSES.map(status => (
-                        <option key={status} value={status}>{status}</option>
-                      ))}
-                    </select>
+                    {isProjectCompleted(project.status) ? (
+                      <span className={`admin-project-status ${project.status.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`}>
+                        {project.status}
+                      </span>
+                    ) : (
+                    <AdminStatusDropdown
+                      badgeClassName="admin-project-status"
+                      isOpen={openStatusProjectId === project.id}
+                      onClose={() => setOpenStatusProjectId(null)}
+                      onOpen={() => setOpenStatusProjectId(project.id)}
+                      onStatusChange={(nextStatus) => handleStatusChange(project.id, nextStatus)}
+                      status={project.status}
+                      statuses={PROJECT_STATUSES}
+                    />
+                    )}
                   </td>
                   <td>{project.lastUpdated}</td>
                   <td>
@@ -217,6 +278,57 @@ function AdminProjects() {
         />
       </section>
 
+      {pendingCompletion && (
+        <div className="admin-modal-backdrop" role="presentation">
+          <section
+            aria-labelledby="project-complete-confirm-title"
+            aria-modal="true"
+            className="admin-modal admin-confirm-modal"
+            role="dialog"
+          >
+            <header className="admin-modal-header">
+              <div>
+                <p>Confirm Action</p>
+                <h2 id="project-complete-confirm-title">Do you want to mark this project as complete?</h2>
+              </div>
+              <button
+                aria-label="Close confirmation"
+                onClick={() => setPendingCompletion(null)}
+                type="button"
+              >
+                <i className="fa-solid fa-xmark" aria-hidden="true"></i>
+              </button>
+            </header>
+            <div className="admin-modal-body">
+              <div className="admin-detail-block">
+                <strong>{pendingCompletion.projectTitle}</strong>
+                <p>
+                  Once marked as completed, the project becomes locked. Its status, details,
+                  description, files, notes, and other fields can no longer be edited or updated.
+                  This action cannot be reversed.
+                </p>
+              </div>
+              <div className="admin-modal-actions">
+                <button
+                  className="admin-link-button secondary"
+                  onClick={() => setPendingCompletion(null)}
+                  type="button"
+                >
+                  Cancel
+                </button>
+                <button
+                  className="admin-link-button"
+                  onClick={confirmCompletion}
+                  type="button"
+                >
+                  Continue
+                </button>
+              </div>
+            </div>
+          </section>
+        </div>
+      )}
+
       {lockedStatusProject && (
         <div className="admin-modal-backdrop" role="presentation">
           <section
@@ -228,7 +340,7 @@ function AdminProjects() {
             <header className="admin-modal-header">
               <div>
                 <p>Project Completed</p>
-                <h2 id="project-locked-title">Status locked</h2>
+                <h2 id="project-locked-title">Status cannot be changed</h2>
               </div>
               <button
                 aria-label="Close status locked message"

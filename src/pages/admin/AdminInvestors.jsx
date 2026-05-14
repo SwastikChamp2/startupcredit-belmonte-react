@@ -2,20 +2,18 @@ import { useMemo, useState } from 'react'
 import { Navigate, useNavigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import AdminPagination from './AdminPagination'
+import AdminStatusDropdown from './AdminStatusDropdown'
 import useAdminPagination from './useAdminPagination'
-import { getInvestors, updateInvestor } from './mockInvestors'
+import {
+  adaptInvestorForAdmin,
+  updateAdminInvestor,
+} from '../../services/adminDataApi'
+import { useFirestoreCollection } from '../../hooks/useFirestoreSnapshot'
 import './admin.css'
 
 const INVESTOR_STATUSES = ['Inquiry Submitted', 'Verification In progress', 'Verified', 'Rejected']
 
 const INVESTOR_TABS = ['All Investors', 'Verified Investors', 'Rejected Investors']
-
-function getStatusClass(status) {
-  if (status === 'Verified') return 'accepted'
-  if (status === 'Verification In progress') return 'pending'
-  if (status === 'Rejected') return 'rejected'
-  return 'submitted'
-}
 
 function getTabCount(tab, investors) {
   if (tab === 'All Investors') {
@@ -29,20 +27,31 @@ function getTabCount(tab, investors) {
 function AdminInvestors() {
   const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
   const navigate = useNavigate()
-  const [investors, setInvestors] = useState(() => getInvestors())
+  const [errorMsg, setErrorMsg] = useState('')
   const [activeTab, setActiveTab] = useState('All Investors')
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('All Status')
   const [sortOrder, setSortOrder] = useState('desc')
+  const [openStatusInvestorId, setOpenStatusInvestorId] = useState(null)
+
+  const { items: investors, loading, error: liveError } = useFirestoreCollection(
+    'investorApplications',
+    adaptInvestorForAdmin
+  )
 
   const parseDate = (dateStr) => {
     if (!dateStr || dateStr === 'Today' || dateStr === '-') return Number.MAX_SAFE_INTEGER
     return new Date(dateStr).getTime()
   }
 
-  const handleStatusChange = (investorId, newStatus) => {
-    updateInvestor(investorId, (inv) => ({ ...inv, status: newStatus }))
-    setInvestors(getInvestors())
+  const handleStatusChange = async (investorId, newStatus) => {
+    setErrorMsg('')
+    try {
+      await updateAdminInvestor(investorId, { status: newStatus })
+      // Live snapshot listener picks up the change.
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not update status.')
+    }
   }
 
   const filteredInvestors = useMemo(() => {
@@ -81,6 +90,17 @@ function AdminInvestors() {
       subtitle="Manage investor applications and verification status."
     >
       <section className="admin-users-card admin-investors-card">
+        {(errorMsg || liveError) && (
+          <div style={{ padding: '12px 18px', margin: '12px 18px 0', background: '#fef2f2', color: '#b91c1c', borderRadius: 8, fontSize: 13 }}>
+            {errorMsg || liveError?.message || 'Could not load investors.'}
+          </div>
+        )}
+        {loading && (
+          <div className="admin-loader-container">
+            <div className="admin-loader"></div>
+            <span>Loading investors...</span>
+          </div>
+        )}
         <div className="admin-users-toolbar">
           <div className="admin-user-tabs" aria-label="Investor status summary">
             {INVESTOR_TABS.map((tab) => (
@@ -159,16 +179,22 @@ function AdminInvestors() {
                   <td>{investor.email}</td>
                   <td>{investor.phone}</td>
                   <td>
-                    <select
-                      className={`admin-investor-status ${getStatusClass(investor.status)}`}
-                      value={investor.status}
-                      onChange={(e) => handleStatusChange(investor.id, e.target.value)}
-                      style={{ border: 'none', cursor: 'pointer', appearance: 'auto' }}
-                    >
-                      {INVESTOR_STATUSES.map(status => (
-                        <option key={status} value={status}>{status}</option>
-                      ))}
-                    </select>
+                    {investor.status === 'Verified' ? (
+                      <span className="admin-investor-status accepted">Verified</span>
+                    ) : (
+                    <AdminStatusDropdown
+                      badgeClassName="admin-investor-status"
+                      isOpen={openStatusInvestorId === investor.id}
+                      onClose={() => setOpenStatusInvestorId(null)}
+                      onOpen={() => setOpenStatusInvestorId(investor.id)}
+                      onStatusChange={(nextStatus) => {
+                        handleStatusChange(investor.id, nextStatus)
+                        setOpenStatusInvestorId(null)
+                      }}
+                      status={investor.status}
+                      statuses={INVESTOR_STATUSES}
+                    />
+                    )}
                   </td>
                   <td>{investor.appliedOn}</td>
                   <td>

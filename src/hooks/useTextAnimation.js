@@ -84,7 +84,9 @@ export default function useTextAnimation() {
       })
 
       // Avoid flash of unstyled content
-      gsap.set('[data-text-animation]', { opacity: 1 })
+      if (document.querySelectorAll('[data-text-animation]').length > 0) {
+        gsap.set('[data-text-animation]', { opacity: 1 })
+      }
 
       // Text animation effect (hero text)
       const textEffectEls = document.querySelectorAll('.text-animation-effect')
