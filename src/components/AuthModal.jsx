@@ -49,6 +49,14 @@ function AuthModal({ open, mode = 'login', onClose, onSwitchMode }) {
     setError('')
   }
 
+  const handlePhoneInput = (e) => {
+    const value = e.target.value
+    e.target.value = value.replace(/[^0-9]/g, '').slice(0, 10)
+    const { name } = e.target
+    setForm((current) => ({ ...current, [name]: e.target.value }))
+    setError('')
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     setError('')
@@ -60,7 +68,7 @@ function AuthModal({ open, mode = 'login', onClose, onSwitchMode }) {
       return
     }
 
-    if (isSignup && form.phoneNumber.length !== 10) {
+    if (isSignup && !/^[0-9]{10}$/.test(form.phoneNumber)) {
       setError('Please enter a valid 10-digit phone number.')
       return
     }
@@ -239,13 +247,14 @@ function AuthModal({ open, mode = 'login', onClose, onSwitchMode }) {
                   <input
                     autoComplete="tel"
                     name="phoneNumber"
-                    onChange={updateField}
+                    onInput={handlePhoneInput}
                     placeholder="10-digit number"
                     required
                     type="tel"
                     value={form.phoneNumber}
                     maxLength={10}
                     minLength={10}
+                    pattern="[0-9]{10}"
                   />
                 </div>
               </label>

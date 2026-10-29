@@ -27,6 +27,7 @@ function AdminUsers() {
   const [actionPending, setActionPending] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
+  const [verificationFilter, setVerificationFilter] = useState('All')
   const [userToDelete, setUserToDelete] = useState(null)
   const [sortOrder, setSortOrder] = useState('desc')
 
@@ -35,9 +36,23 @@ function AdminUsers() {
     adaptUserForAdmin
   )
 
-  const parseDate = (dateStr) => {
+  const parseDate = (dateStr, rawTimestamp) => {
+    // Prefer the raw Firestore timestamp if available
+    if (rawTimestamp) {
+      const seconds = rawTimestamp._seconds ?? rawTimestamp.seconds ?? null
+      if (typeof seconds === 'number') {
+        return seconds * 1000
+      }
+      if (rawTimestamp instanceof Date) {
+        return rawTimestamp.getTime()
+      }
+      if (typeof rawTimestamp.toDate === 'function') {
+        return rawTimestamp.toDate().getTime()
+      }
+    }
+
+    // Fallback to parsing the formatted string
     if (!dateStr || dateStr === '—') return 0
-    // Try to parse the DD-MMM-YYYY HH:mm format or similar from toLocaleString
     const parts = dateStr.split(/[\s,-]+/)
     if (parts.length >= 3) {
       return new Date(dateStr).getTime() || 0
@@ -52,21 +67,28 @@ function AdminUsers() {
         ? users
         : users.filter((user) => user.status === statusFilter)
 
+    const usersByVerification =
+      verificationFilter === 'All'
+        ? usersByStatus
+        : usersByStatus.filter((user) =>
+            verificationFilter === 'Complete' ? user.emailVerified : !user.emailVerified
+          )
+
     let result = query
-      ? usersByStatus.filter(
+      ? usersByVerification.filter(
           (user) =>
             user.name.toLowerCase().includes(query) ||
             user.email.toLowerCase().includes(query) ||
             formatPhoneNumber(user.countryCode, user.phoneNumber).toLowerCase().includes(query),
         )
-      : usersByStatus
+      : usersByVerification
 
     return result.sort((a, b) => {
-      const timeA = parseDate(a.createdAt)
-      const timeB = parseDate(b.createdAt)
+      const timeA = parseDate(a.createdAt, a.rawCreatedAt)
+      const timeB = parseDate(b.createdAt, b.rawCreatedAt)
       return sortOrder === 'desc' ? timeB - timeA : timeA - timeB
     })
-  }, [searchTerm, statusFilter, users, sortOrder])
+  }, [searchTerm, statusFilter, verificationFilter, users, sortOrder])
 
   const usersPagination = useAdminPagination(filteredUsers)
 
@@ -168,6 +190,20 @@ function AdminUsers() {
                 <th>Email</th>
                 <th>Phone Number</th>
                 <th>
+                  Email Verification
+                  <select
+                    className="admin-filter-select"
+                    onChange={(event) => setVerificationFilter(event.target.value)}
+                    value={verificationFilter}
+                    aria-label="Filter by email verification"
+                    style={{ marginLeft: '8px', padding: '4px 8px', fontSize: '12px', borderRadius: '4px', border: '1px solid var(--border)' }}
+                  >
+                    <option value="All">All</option>
+                    <option value="Complete">Complete</option>
+                    <option value="Incomplete">Incomplete</option>
+                  </select>
+                </th>
+                <th>
                   Date Created
                   <button
                     onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
@@ -193,6 +229,11 @@ function AdminUsers() {
                   </td>
                   <td>{user.email}</td>
                   <td>{formatPhoneNumber(user.countryCode, user.phoneNumber) || '—'}</td>
+                  <td>
+                    <span className={`admin-status ${user.emailVerified ? 'verified' : 'unverified'}`}>
+                      {user.emailVerified ? 'Complete' : 'Incomplete'}
+                    </span>
+                  </td>
                   <td>{user.createdAt || '—'}</td>
                   <td>
                     <span className={`admin-status ${user.status.toLowerCase()}`}>

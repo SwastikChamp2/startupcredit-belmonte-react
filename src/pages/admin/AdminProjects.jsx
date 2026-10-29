@@ -10,6 +10,7 @@ import {
   updateAdminProjectSubmission,
 } from '../../services/adminDataApi'
 import { useFirestoreCollection } from '../../hooks/useFirestoreSnapshot'
+import { formatPhoneNumber } from '../../../utils/phoneUtils'
 
 // Submissions still in inquiry phase don't appear in the project workflow.
 const INQUIRY_STATUSES = new Set(['Inquiry Pending'])
@@ -221,6 +222,8 @@ function AdminProjects() {
                     <div className="admin-project-cell">
                       <strong>{project.projectTitle}</strong>
                       <span>{project.clientName}</span>
+                      <span>{project.clientEmail}</span>
+                      {project.clientPhone && <span>{project.clientPhone}</span>}
                     </div>
                   </td>
                   <td>

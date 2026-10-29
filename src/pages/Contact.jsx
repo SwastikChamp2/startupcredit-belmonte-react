@@ -11,6 +11,11 @@ function Contact() {
   const [showModal, setShowModal] = useState(false)
   const [countryCode, setCountryCode] = useState('91')
 
+  const handlePhoneInput = (e) => {
+    const value = e.target.value
+    e.target.value = value.replace(/[^0-9]/g, '').slice(0, 10)
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setErrorMsg('')
@@ -18,7 +23,7 @@ function Contact() {
     const formData = new FormData(e.target)
     const phoneNumber = String(formData.get('mobile') || '').trim()
 
-    if (phoneNumber.length !== 10) {
+    if (!/^[0-9]{10}$/.test(phoneNumber)) {
       setErrorMsg('Please enter a valid 10-digit phone number.')
       return
     }
@@ -91,6 +96,8 @@ function Contact() {
                             required
                             maxLength={10}
                             minLength={10}
+                            pattern="[0-9]{10}"
+                            onInput={handlePhoneInput}
                           />
                         </div>
                       </div>

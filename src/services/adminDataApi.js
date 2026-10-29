@@ -137,6 +137,7 @@ const docsToArray = (snapshot) =>
 export const adaptUserForAdmin = (raw) => {
   if (!raw) return null
   const fallbackName = (raw.email || '').split('@')[0] || 'Unnamed user'
+  const rawCreatedAt = raw.createdAt
   return {
     id: raw.id || raw.uid,
     name: (raw.name || '').trim() || fallbackName,
@@ -144,7 +145,9 @@ export const adaptUserForAdmin = (raw) => {
     provider: raw.provider || 'password',
     countryCode: raw.countryCode || '',
     phoneNumber: raw.phoneNumber || '',
+    emailVerified: Boolean(raw.emailVerified),
     createdAt: formatTimestamp(raw.createdAt),
+    rawCreatedAt: rawCreatedAt,
     status: raw.disabled ? 'Disabled' : 'Active',
   }
 }

@@ -58,6 +58,8 @@ const upsertUserDoc = async (firebaseUser, extras = {}) => {
     name: extras.name ?? firebaseUser.displayName ?? '',
     provider,
     emailVerified: Boolean(firebaseUser.emailVerified),
+    countryCode: extras.countryCode || '',
+    phoneNumber: extras.phoneNumber || '',
   }
   if (snap.exists()) {
     await setDoc(ref, { ...baseFields, updatedAt: serverTimestamp() }, { merge: true })
