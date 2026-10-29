@@ -23,13 +23,16 @@ function AdminGovernmentSchemeDetail() {
   const [loading, setLoading] = useState(true)
   const [saveError, setSaveError] = useState('')
   const [saving, setSaving] = useState(false)
+  const [viewMode, setViewMode] = useState('ui')
+  const [jsonText, setJsonText] = useState('')
+  const [jsonError, setJsonError] = useState('')
   const [formData, setFormData] = useState({
     name: '',
     fullTitle: '',
     slug: '',
     status: 'Published',
     order: 1,
-    categories: [],
+    category: '',
     categoryId: '',
     highlights: [''],
     tags: [''],
@@ -44,6 +47,7 @@ function AdminGovernmentSchemeDetail() {
     sections: [],
     seoTitle: '',
     seoDescription: '',
+    lastUpdated: '',
   })
 
   useEffect(() => {
@@ -56,9 +60,14 @@ function AdminGovernmentSchemeDetail() {
           setAllCategories(data.categories)
           setCategoryLookup(data.categoryLookup)
           if (data.scheme) {
+            // Migrate from categories array to category string
+            const schemeWithMigration = {
+              ...data.scheme,
+              category: data.scheme.category || (data.scheme.categories?.[0] || ''),
+            }
             setFormData((prev) => ({
               ...prev,
-              ...data.scheme,
+              ...schemeWithMigration,
               highlights: data.scheme.highlights?.length ? data.scheme.highlights : (prev.highlights || ['']),
               tags: data.scheme.tags?.length ? data.scheme.tags : (prev.tags || ['']),
               documents: data.scheme.documents?.length ? data.scheme.documents : (prev.documents || ['']),
@@ -82,7 +91,7 @@ function AdminGovernmentSchemeDetail() {
     return () => {
       cancelled = true
     }
-  }, [schemeId, isEdit])
+  }, [schemeId, isEdit, categoryLookup])
 
   const categoryNames = (allCategories || []).map((c) => c.name)
 
@@ -94,7 +103,7 @@ function AdminGovernmentSchemeDetail() {
     const { name, value } = e.target
     setFormData(prev => {
       const updates = { [name]: value }
-      
+
       if (name === 'name') {
         updates.slug = value
           .toLowerCase()
@@ -102,7 +111,7 @@ function AdminGovernmentSchemeDetail() {
           .replace(/\s+/g, ' ')
           .trim()
           .replace(/\s/g, '-')
-        
+
         if (!prev.seoTitle || prev.seoTitle === prev.name) {
           updates.seoTitle = value
         }
@@ -118,12 +127,25 @@ function AdminGovernmentSchemeDetail() {
     })
   }
 
-  const handleMultiSelect = (category) => {
+  const handleRichTextChange = (name, value) => {
     setFormData(prev => {
-      const categories = prev.categories.includes(category)
-        ? prev.categories.filter(c => c !== category)
-        : [...prev.categories, category]
-      return { ...prev, categories }
+      const updates = { [name]: value }
+
+      if (name === 'description') {
+        if (!prev.seoDescription || prev.seoDescription === prev.description) {
+          updates.seoDescription = value
+        }
+      }
+
+      return { ...prev, ...updates }
+    })
+  }
+
+  const handleCategorySelect = (e) => {
+    const selectedCategory = e.target.value
+    setFormData(prev => {
+      const categoryId = selectedCategory ? categoryLookup.nameToId[selectedCategory] || '' : ''
+      return { ...prev, category: selectedCategory, categoryId }
     })
   }
 
@@ -155,6 +177,16 @@ function AdminGovernmentSchemeDetail() {
 
   const handleNextOrSave = async () => {
     setSaveError('')
+    
+    if (viewMode === 'json' && jsonError) {
+      setSaveError('Please fix JSON errors before saving.')
+      return
+    }
+
+    if (viewMode === 'json' && !jsonToFormData(jsonText)) {
+      setSaveError('Invalid JSON. Please fix the errors before saving.')
+      return
+    }
     
     if (!isFormValid()) {
       // Find which tab the first missing field is in and go there
@@ -200,6 +232,132 @@ function AdminGovernmentSchemeDetail() {
     }
   }
 
+  const formDataToJson = () => {
+    return JSON.stringify(formData, null, 2)
+  }
+
+  const jsonToFormData = (jsonString) => {
+    try {
+      const parsed = JSON.parse(jsonString)
+      setJsonError('')
+      setFormData(prev => ({ ...prev, ...parsed }))
+      return true
+    } catch (err) {
+      setJsonError(`Invalid JSON: ${err.message}`)
+      return false
+    }
+  }
+
+  const handleToggleView = (mode) => {
+    if (mode === 'json') {
+      setJsonText(formDataToJson())
+      setJsonError('')
+    } else {
+      if (jsonError) {
+        return
+      }
+      if (!jsonToFormData(jsonText)) {
+        return
+      }
+    }
+    setViewMode(mode)
+  }
+
+  const handleJsonChange = (e) => {
+    setJsonText(e.target.value)
+    try {
+      JSON.parse(e.target.value)
+      setJsonError('')
+    } catch (err) {
+      setJsonError(`Invalid JSON: ${err.message}`)
+    }
+  }
+
+  const loadDefaultTemplate = () => {
+    const template = {
+      name: 'Startup India Seed Fund Scheme',
+      fullTitle: 'Startup India Seed Fund Scheme (SISFS)',
+      slug: 'startup-india-seed-fund-scheme',
+      status: 'Published',
+      order: 1,
+      category: 'Incentives',
+      categoryId: 'incentives',
+      highlights: [
+        'Provides seed funding to startups',
+        'Supports proof of concept, prototype development, and product trials',
+        'Funding up to ₹20 lakh for early-stage startups'
+      ],
+      tags: ['startup', 'funding', 'seed-fund', 'innovation'],
+      image: '',
+      objective: '<p>To provide financial assistance to startups for proof of concept, prototype development, and product trials. The scheme aims to create a robust startup ecosystem in India by supporting early-stage startups with seed capital.</p>',
+      benefits: '<p><ul><li>Seed funding up to ₹20 lakh for eligible startups</li><li>Support for product development and market entry</li><li>Mentorship and guidance from industry experts</li><li>Access to incubation facilities and resources</li></ul></p>',
+      beneficiary: '<p>Early-stage startups registered in India, not older than 2 years, with innovative business ideas and potential for scalability.</p>',
+      eligibilityCriteria: '<p><ul><li>Startup must be incorporated in India</li><li>Should not be older than 2 years from date of incorporation</li><li>Must have a innovative business idea</li><li>Should not have received more than ₹10 lakh in funding</li><li>Must be recommended by an incubator</li></ul></p>',
+      description: '<p>The Startup India Seed Fund Scheme (SISFS) is a government initiative designed to provide financial support to early-stage startups. The scheme aims to address the lack of seed capital in the Indian startup ecosystem and help startups transform their innovative ideas into viable businesses.</p><p>Under this scheme, eligible startups can receive seed funding of up to ₹20 lakh to support various activities including proof of concept, prototype development, product trials, and market entry. The funding is provided through eligible incubators across India.</p>',
+      content: '',
+      documents: ['Certificate of Incorporation', 'PAN Card', 'Aadhar Card of Directors', 'Business Plan', 'Pitch Deck'],
+      sections: [],
+      seoTitle: 'Startup India Seed Fund Scheme - Government Funding for Startups',
+      seoDescription: 'Apply for Startup India Seed Fund Scheme (SISFS) to get seed funding up to ₹20 lakh for your early-stage startup. Know eligibility, benefits, and application process.',
+      lastUpdated: new Date().toISOString()
+    }
+    setJsonText(JSON.stringify(template, null, 2))
+    setJsonError('')
+  }
+
+  const copyAIPrompt = () => {
+    const categoryList = allCategories.length > 0
+      ? allCategories.map(cat => `- ${cat.name} [ID: ${cat.id}]`).join('\n')
+      : '- Incentives [ID: incentives]\n- Technology [ID: technology]\n- Manufacturing [ID: manufacturing]\n- Agriculture [ID: agriculture]\n- Healthcare [ID: healthcare]\n- Education [ID: education]\n- Women Empowerment [ID: women-empowerment]\n- Rural Development [ID: rural-development]\n- Urban Development [ID: urban-development]\n- Energy [ID: energy]\n- Finance [ID: finance]\n- Infrastructure [ID: infrastructure]\n- Environment [ID: environment]\n- MSME [ID: msme]\n- Innovation [ID: innovation]\n- Social Welfare [ID: social-welfare]'
+
+    const prompt = `Please provide the government scheme data in the following JSON format. Replace <EXPLAIN YOUR GOVERNMENT SCHEME HERE> with the actual details of the government scheme you want me to format.
+
+IMPORTANT: For the "category" field, select ONE appropriate category from these existing Government Scheme Categories (use the category name):
+${categoryList}
+
+For the "categoryId" field, use the ID shown in brackets for the selected category.
+
+Example of a properly formatted government scheme (Startup India Seed Fund Scheme):
+
+{
+  "name": "Startup India Seed Fund Scheme",
+  "fullTitle": "Startup India Seed Fund Scheme (SISFS)",
+  "slug": "startup-india-seed-fund-scheme",
+  "status": "Published",
+  "order": 1,
+  "category": "Incentives",
+  "categoryId": "incentives",
+  "highlights": [
+    "Provides seed funding to startups",
+    "Supports proof of concept, prototype development, and product trials",
+    "Funding up to ₹20 lakh for early-stage startups"
+  ],
+  "tags": ["startup", "funding", "seed-fund", "innovation"],
+  "image": "",
+  "objective": "<p>To provide financial assistance to startups for proof of concept, prototype development, and product trials. The scheme aims to create a robust startup ecosystem in India by supporting early-stage startups with seed capital.</p>",
+  "benefits": "<p><ul><li>Seed funding up to ₹20 lakh for eligible startups</li><li>Support for product development and market entry</li><li>Mentorship and guidance from industry experts</li><li>Access to incubation facilities and resources</li></ul></p>",
+  "beneficiary": "<p>Early-stage startups registered in India, not older than 2 years, with innovative business ideas and potential for scalability.</p>",
+  "eligibilityCriteria": "<p><ul><li>Startup must be incorporated in India</li><li>Should not be older than 2 years from date of incorporation</li><li>Must have a innovative business idea</li><li>Should not have received more than ₹10 lakh in funding</li><li>Must be recommended by an incubator</li></ul></p>",
+  "description": "<p>The Startup India Seed Fund Scheme (SISFS) is a government initiative designed to provide financial support to early-stage startups. The scheme aims to address the lack of seed capital in the Indian startup ecosystem and help startups transform their innovative ideas into viable businesses.</p><p>Under this scheme, eligible startups can receive seed funding of up to ₹20 lakh to support various activities including proof of concept, prototype development, product trials, and market entry. The funding is provided through eligible incubators across India.</p>",
+  "content": "",
+  "documents": ["Certificate of Incorporation", "PAN Card", "Aadhar Card of Directors", "Business Plan", "Pitch Deck"],
+  "sections": [],
+  "seoTitle": "Startup India Seed Fund Scheme - Government Funding for Startups",
+  "seoDescription": "Apply for Startup India Seed Fund Scheme (SISFS) to get seed funding up to ₹20 lakh for your early-stage startup. Know eligibility, benefits, and application process."
+}
+
+<EXPLAIN YOUR GOVERNMENT SCHEME HERE>
+
+Please format the response as valid JSON only, without any additional text or markdown formatting.`
+    
+    navigator.clipboard.writeText(prompt).then(() => {
+      alert('AI Prompt copied to clipboard!')
+    }).catch(err => {
+      console.error('Failed to copy: ', err)
+      alert('Failed to copy prompt. Please try again.')
+    })
+  }
+
   return (
     <AdminShell
       title={isEdit ? 'Edit Government Scheme' : 'Create New Government Scheme'}
@@ -214,6 +372,22 @@ function AdminGovernmentSchemeDetail() {
           <i className="fa-solid fa-arrow-left" aria-hidden="true"></i>
           Back
         </button>
+        <div className="view-mode-toggle">
+          <button
+            className={`toggle-btn ${viewMode === 'ui' ? 'active' : ''}`}
+            onClick={() => handleToggleView('ui')}
+            type="button"
+          >
+            UI
+          </button>
+          <button
+            className={`toggle-btn ${viewMode === 'json' ? 'active' : ''}`}
+            onClick={() => handleToggleView('json')}
+            type="button"
+          >
+            JSON
+          </button>
+        </div>
       </div>
       <div className="admin-service-detail-container">
         <header className="admin-service-detail-header">
@@ -234,7 +408,44 @@ function AdminGovernmentSchemeDetail() {
         </header>
 
         <div className="admin-service-detail-content">
-          {activeTab === 'Overview' && (
+          {viewMode === 'json' ? (
+            <div className="json-editor-container">
+              <div className="json-editor-header">
+                <h3>JSON Editor</h3>
+                <div className="json-editor-actions">
+                  <button
+                    className="json-action-btn"
+                    onClick={loadDefaultTemplate}
+                    type="button"
+                  >
+                    <i className="fa-solid fa-file-code"></i> Load Default Template
+                  </button>
+                  <button
+                    className="json-action-btn"
+                    onClick={copyAIPrompt}
+                    type="button"
+                  >
+                    <i className="fa-solid fa-copy"></i> Copy AI Prompt
+                  </button>
+                </div>
+              </div>
+              <textarea
+                className="json-textarea"
+                value={jsonText}
+                onChange={handleJsonChange}
+                placeholder="Paste or edit JSON here..."
+                spellCheck="false"
+              />
+              {jsonError && (
+                <div className="json-error-message">
+                  <i className="fa-solid fa-circle-exclamation"></i>
+                  {jsonError}
+                </div>
+              )}
+            </div>
+          ) : (
+            <>
+              {activeTab === 'Overview' && (
             <>
               <div className="admin-service-overview-grid">
                 <div className="admin-form-section">
@@ -262,22 +473,20 @@ function AdminGovernmentSchemeDetail() {
                   </div>
 
                   <div className="admin-form-group">
-                    <label>Categories (Select one or more)</label>
-                    <div className="admin-multi-select-chips">
+                    <label>Category (Select one)</label>
+                    <select
+                      name="category"
+                      value={formData.category}
+                      onChange={handleCategorySelect}
+                    >
+                      <option value="">Select a category</option>
                       {(categoryNames || []).map((cat) => (
-                        <button
-                          key={cat}
-                          type="button"
-                          className={formData.categories.includes(cat) ? 'active' : ''}
-                          onClick={() => handleMultiSelect(cat)}
-                        >
-                          {cat} {formData.categories.includes(cat) && <i className="fa-solid fa-xmark"></i>}
-                        </button>
+                        <option key={cat} value={cat}>{cat}</option>
                       ))}
-                      {categoryNames.length === 0 && (
-                        <span style={{ fontSize: 13, color: '#94a3b8' }}>No categories yet — add some on the management page.</span>
-                      )}
-                    </div>
+                    </select>
+                    {categoryNames.length === 0 && (
+                      <span style={{ fontSize: 13, color: '#94a3b8', marginTop: '4px', display: 'block' }}>No categories yet — add some on the management page.</span>
+                    )}
                   </div>
                 </div>
 
@@ -321,7 +530,7 @@ function AdminGovernmentSchemeDetail() {
               <RichTextEditor
                 name="objective"
                 value={formData.objective}
-                onChange={handleInputChange}
+                onChange={(value) => handleRichTextChange('objective', value)}
                 placeholder="What is the main objective of this scheme? (HTML supported)"
               />
             </div>
@@ -335,7 +544,7 @@ function AdminGovernmentSchemeDetail() {
               <RichTextEditor
                 name="benefits"
                 value={formData.benefits}
-                onChange={handleInputChange}
+                onChange={(value) => handleRichTextChange('benefits', value)}
                 placeholder="Describe the nature of assistance and benefits provided... (HTML supported)"
               />
             </div>
@@ -349,7 +558,7 @@ function AdminGovernmentSchemeDetail() {
               <RichTextEditor
                 name="beneficiary"
                 value={formData.beneficiary}
-                onChange={handleInputChange}
+                onChange={(value) => handleRichTextChange('beneficiary', value)}
                 placeholder="Who are the primary beneficiaries of this scheme? (HTML supported)"
               />
             </div>
@@ -363,7 +572,7 @@ function AdminGovernmentSchemeDetail() {
               <RichTextEditor
                 name="eligibilityCriteria"
                 value={formData.eligibilityCriteria}
-                onChange={handleInputChange}
+                onChange={(value) => handleRichTextChange('eligibilityCriteria', value)}
                 placeholder="Describe the eligibility criteria in detail... (HTML supported)"
               />
             </div>
@@ -377,7 +586,7 @@ function AdminGovernmentSchemeDetail() {
               <RichTextEditor
                 name="description"
                 value={formData.description}
-                onChange={handleInputChange}
+                onChange={(value) => handleRichTextChange('description', value)}
                 placeholder="Full description of the scheme and any additional details... (HTML supported)"
               />
             </div>
@@ -415,6 +624,8 @@ function AdminGovernmentSchemeDetail() {
                 <i className="fa-solid fa-trash"></i> Delete Scheme
               </button>
             </div>
+          )}
+            </>
           )}
         </div>
 

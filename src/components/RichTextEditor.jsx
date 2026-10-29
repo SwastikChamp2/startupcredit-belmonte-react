@@ -2,11 +2,13 @@ import React, { useRef, useState, useEffect } from 'react';
 
 const RichTextEditor = ({ value, onChange, placeholder = '', maxLength = 10000, name }) => {
     const editorRef = useRef(null);
+    const isInitialized = useRef(false);
+    const isInternalChange = useRef(false);
     const [characterCount, setCharacterCount] = useState(0);
     const [showLinkModal, setShowLinkModal] = useState(false);
     const [linkUrl, setLinkUrl] = useState('https://');
     const [storedSelection, setStoredSelection] = useState(null);
-    
+
     const [activeStyles, setActiveStyles] = useState({
         bold: false,
         italic: false,
@@ -17,10 +19,17 @@ const RichTextEditor = ({ value, onChange, placeholder = '', maxLength = 10000, 
         h4: false,
     });
 
-    // Sync external value to internal contentEditable only when it actually changes externally
+    // Sync external value to internal contentEditable only on initial mount or when value changes externally
     useEffect(() => {
-        if (editorRef.current && editorRef.current.innerHTML !== (value || '')) {
-            editorRef.current.innerHTML = value || '';
+        if (editorRef.current) {
+            if (!isInitialized.current) {
+                // Initial mount - set the value
+                editorRef.current.innerHTML = value || '';
+                isInitialized.current = true;
+            } else if (!isInternalChange.current && editorRef.current.innerHTML !== (value || '')) {
+                // Value changed externally (not from user input) - sync it
+                editorRef.current.innerHTML = value || '';
+            }
         }
     }, [value]);
 
@@ -52,10 +61,16 @@ const RichTextEditor = ({ value, onChange, placeholder = '', maxLength = 10000, 
         if (editorRef.current) {
             const content = editorRef.current.innerHTML;
             setCharacterCount(countCharacters(content));
+            // Mark this as an internal change so useEffect doesn't overwrite it
+            isInternalChange.current = true;
             // Pass the value directly as a string to avoid [object Object] errors
             if (typeof onChange === 'function') {
                 onChange(content);
             }
+            // Reset the flag after onChange is called
+            setTimeout(() => {
+                isInternalChange.current = false;
+            }, 0);
         }
     };
 

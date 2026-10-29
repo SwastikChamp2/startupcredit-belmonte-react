@@ -582,10 +582,10 @@ export const adaptSchemeForAdmin = (raw, categoryLookup) => {
     slug: raw.id,
     avatar: initialsOf(raw.name),
     categoryId: raw.categoryId || '',
-    categories: primaryCatName ? [primaryCatName] : [],
+    category: raw.category || primaryCatName || '',
     status: raw.status || 'Published',
     order: raw.sortOrder ?? raw.order ?? 0,
-    lastUpdated: formatTimestamp(raw.updatedAt),
+    lastUpdated: formatTimestamp(raw.updatedAt || raw.createdAt),
     highlights: raw.highlights || [],
     tags: raw.tags || [],
     sections: raw.sections || [],
@@ -602,13 +602,14 @@ export const adaptSchemeForAdmin = (raw, categoryLookup) => {
 }
 
 const adminSchemePayload = (form, categoryLookup) => {
-  const firstCategoryName = (form.categories && form.categories[0]) || ''
+  const categoryName = form.category || ''
   const categoryId =
-    form.categoryId || categoryLookup?.nameToId?.[firstCategoryName] || firstCategoryName
+    form.categoryId || categoryLookup?.nameToId?.[categoryName] || categoryName
   return {
     name: form.name,
     fullTitle: form.fullTitle || '',
     categoryId,
+    category: categoryName,
     objective: form.objective || '',
     benefits: form.benefits || '',
     beneficiary: form.beneficiary || '',

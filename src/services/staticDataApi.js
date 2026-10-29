@@ -55,7 +55,10 @@ export const fetchGovernmentSchemes = () =>
       getDocs(collection(db, 'governmentSchemes')),
       getDocs(collection(db, 'governmentSchemeCategories')),
     ])
-    const schemes = docsToArray(schemesSnap).sort(
+    const schemes = docsToArray(schemesSnap).map(scheme => ({
+      ...scheme,
+      lastUpdated: scheme.updatedAt || scheme.createdAt
+    })).sort(
       (a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)
     )
     const categories = docsToArray(categoriesSnap).sort(

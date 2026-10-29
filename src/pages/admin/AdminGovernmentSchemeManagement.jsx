@@ -81,18 +81,25 @@ function AdminGovernmentSchemeManagement() {
 
   const filteredSchemes = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
-    return schemes.filter((scheme) => {
-      const matchesSearch = !query || 
-        scheme.name.toLowerCase().includes(query) || 
+    const filtered = schemes.filter((scheme) => {
+      const matchesSearch = !query ||
+        scheme.name.toLowerCase().includes(query) ||
         scheme.slug.toLowerCase().includes(query) ||
         (scheme.fullTitle && scheme.fullTitle.toLowerCase().includes(query))
-      
-      const matchesCategory = categoryFilter === 'All Categories' || 
-        (scheme.categories && scheme.categories.includes(categoryFilter))
-      
+
+      const matchesCategory = categoryFilter === 'All Categories' ||
+        scheme.category === categoryFilter
+
       const matchesStatus = statusFilter === 'All Status' || scheme.status === statusFilter
-      
+
       return matchesSearch && matchesCategory && matchesStatus
+    })
+
+    // Sort by lastUpdated, most recent first
+    return filtered.sort((a, b) => {
+      const dateA = new Date(a.lastUpdated || 0)
+      const dateB = new Date(b.lastUpdated || 0)
+      return dateB - dateA
     })
   }, [schemes, searchTerm, categoryFilter, statusFilter])
 
@@ -260,11 +267,10 @@ function AdminGovernmentSchemeManagement() {
                       </td>
                       <td>
                         <div className="admin-cat-badges-list">
-                          {scheme.categories?.slice(0, 2).map(cat => (
-                            <span key={cat} className="admin-service-cat-badge">{cat}</span>
-                          ))}
-                          {scheme.categories?.length > 2 && (
-                            <span className="admin-cat-more">+{scheme.categories.length - 2}</span>
+                          {scheme.category ? (
+                            <span key={scheme.category} className="admin-service-cat-badge">{scheme.category}</span>
+                          ) : (
+                            <span style={{ fontSize: 13, color: '#94a3b8' }}>Uncategorized</span>
                           )}
                         </div>
                       </td>

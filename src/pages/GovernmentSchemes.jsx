@@ -27,6 +27,10 @@ function GovernmentSchemes() {
     fetchGovernmentSchemes()
       .then((data) => {
         if (cancelled) return
+        console.log('Government Schemes Data:', data)
+        console.log('Schemes:', data.schemes)
+        console.log('Categories:', data.categories)
+        console.log('Category Map:', data.categoryMap)
         setGovernmentSchemes(data.schemes)
         setGovernmentSchemeCategories(data.categories)
         setGovernmentSchemeCategoryMap(data.categoryMap)
@@ -49,12 +53,13 @@ function GovernmentSchemes() {
   const filteredSchemes = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase()
 
-    return governmentSchemes.filter((scheme) => {
+    const filtered = governmentSchemes.filter((scheme) => {
       if (!normalizedSearch) return true
 
       const haystack = [
         scheme.name,
         scheme.fullTitle,
+        scheme.category || '',
         ...(scheme.sections || []).map((section) => `${section.title} ${section.content}`),
         governmentSchemeCategoryMap[scheme.categoryId]?.name,
       ]
@@ -63,12 +68,25 @@ function GovernmentSchemes() {
 
       return haystack.includes(normalizedSearch)
     })
+
+    // Sort by lastUpdated, most recent first
+    return filtered.sort((a, b) => {
+      const dateA = new Date(a.lastUpdated || 0)
+      const dateB = new Date(b.lastUpdated || 0)
+      return dateB - dateA
+    })
   }, [searchTerm, governmentSchemes, governmentSchemeCategoryMap])
 
   const fallbackCategory = governmentSchemeCategories[0]
   const visibleCategory = governmentSchemeCategoryMap[activeCategoryId] || (fallbackCategory ? governmentSchemeCategoryMap[fallbackCategory.id] : null)
   const visibleCategorySchemes = visibleCategory
-    ? filteredSchemes.filter((scheme) => scheme.categoryId === visibleCategory.id)
+    ? filteredSchemes
+        .filter((scheme) => scheme.categoryId === visibleCategory.id)
+        .sort((a, b) => {
+          const dateA = new Date(a.lastUpdated || 0)
+          const dateB = new Date(b.lastUpdated || 0)
+          return dateB - dateA
+        })
     : []
 
   const setView = (nextView) => {
@@ -167,7 +185,7 @@ function GovernmentSchemes() {
                   return (
                     <Link className="gs-card fade-top" key={scheme.id} to={`/government-schemes/${scheme.id}`}>
                       <div className="gs-card-top">
-                        <span className="gs-chip">{category.name}</span>
+                        <span className="gs-chip">{category?.name || 'Uncategorized'}</span>
                       </div>
 
                       <h3>{scheme.name}</h3>
