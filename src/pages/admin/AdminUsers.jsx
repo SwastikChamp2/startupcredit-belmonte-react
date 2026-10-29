@@ -60,7 +60,7 @@ function AdminUsers() {
     return 0
   }
 
-  const filteredUsers = useMemo(() => {
+   const filteredUsers = useMemo(() => {
     const query = searchTerm.trim().toLowerCase()
     const usersByStatus =
       statusFilter === 'All'
@@ -74,14 +74,16 @@ function AdminUsers() {
             verificationFilter === 'Complete' ? user.emailVerified : !user.emailVerified
           )
 
-    let result = query
+    // FIX: copy the array when no filter/search applies, so sort() never
+    // mutates the original and a new reference is returned every time.
+    const result = query
       ? usersByVerification.filter(
           (user) =>
             user.name.toLowerCase().includes(query) ||
             user.email.toLowerCase().includes(query) ||
             formatPhoneNumber(user.countryCode, user.phoneNumber).toLowerCase().includes(query),
         )
-      : usersByVerification
+      : [...usersByVerification]
 
     return result.sort((a, b) => {
       const timeA = parseDate(a.createdAt, a.rawCreatedAt)
@@ -89,6 +91,7 @@ function AdminUsers() {
       return sortOrder === 'desc' ? timeB - timeA : timeA - timeB
     })
   }, [searchTerm, statusFilter, verificationFilter, users, sortOrder])
+  
 
   const usersPagination = useAdminPagination(filteredUsers)
 

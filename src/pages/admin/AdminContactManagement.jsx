@@ -40,22 +40,24 @@ function AdminContactManagement() {
   }
 
   const filteredInquiries = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase()
-    let result = query 
-      ? inquiries.filter(
-          (inquiry) =>
-            (inquiry.name || '').toLowerCase().includes(query) ||
-            (inquiry.email || '').toLowerCase().includes(query) ||
-            (inquiry.subject || '').toLowerCase().includes(query),
-        )
-      : inquiries
+  const query = searchTerm.trim().toLowerCase()
+  const result = query
+    ? inquiries.filter(
+        (inquiry) =>
+          (inquiry.name || '').toLowerCase().includes(query) ||
+          (inquiry.email || '').toLowerCase().includes(query) ||
+          (inquiry.subject || '').toLowerCase().includes(query),
+      )
+    : [...inquiries] // copy so we never sort state in place
 
-    return result.sort((a, b) => {
-      const timeA = parseDate(a.submittedAt)
-      const timeB = parseDate(b.submittedAt)
-      return sortOrder === 'desc' ? timeB - timeA : timeA - timeB
-    })
-  }, [inquiries, searchTerm, sortOrder])
+  return result.sort((a, b) => {
+    const timeA = parseDate(a.submittedAt)
+    const timeB = parseDate(b.submittedAt)
+    return sortOrder === 'desc' ? timeB - timeA : timeA - timeB
+  })
+}, [inquiries, searchTerm, sortOrder])
+
+
   const inquiriesPagination = useAdminPagination(filteredInquiries)
 
   if (!isAuthenticated) {
