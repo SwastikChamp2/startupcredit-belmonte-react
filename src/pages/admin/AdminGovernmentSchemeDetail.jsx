@@ -165,12 +165,13 @@ function AdminGovernmentSchemeDetail() {
   }
 
   const REQUIRED_FIELDS = [
-    'name', 
-    'slug', 
-    'objective', 
-    'benefits', 
-    'beneficiary', 
-    'eligibilityCriteria', 
+    'name',
+    'slug',
+    'category',
+    'objective',
+    'benefits',
+    'beneficiary',
+    'eligibilityCriteria',
     'description'
   ]
   const isFormValid = () => REQUIRED_FIELDS.every(key => !!formData[key])
@@ -190,17 +191,29 @@ function AdminGovernmentSchemeDetail() {
     
     if (!isFormValid()) {
       // Find which tab the first missing field is in and go there
-      if (!formData.name || !formData.slug) {
+      if (!formData.name) {
+        setSaveError('Please enter a Scheme Name.')
+        setActiveTab('Overview')
+      } else if (!formData.slug) {
+        setSaveError('Please enter a Slug.')
+        setActiveTab('Overview')
+      } else if (!formData.category) {
+        setSaveError('Please select a Category.')
         setActiveTab('Overview')
       } else if (!formData.objective) {
+        setSaveError('Please enter the Objective.')
         setActiveTab('Objective')
       } else if (!formData.benefits) {
+        setSaveError('Please enter the Benefits.')
         setActiveTab('Benefits')
       } else if (!formData.beneficiary) {
+        setSaveError('Please enter the Beneficiary information.')
         setActiveTab('Beneficiary')
       } else if (!formData.eligibilityCriteria) {
+        setSaveError('Please enter the Eligibility Criteria.')
         setActiveTab('Eligibility')
       } else if (!formData.description) {
+        setSaveError('Please enter the Description.')
         setActiveTab('Description')
       }
       return
@@ -314,6 +327,8 @@ function AdminGovernmentSchemeDetail() {
 
 IMPORTANT: For the "category" field, select ONE appropriate category from these existing Government Scheme Categories (use the category name):
 ${categoryList}
+
+IMPORTANT: Keep the content simple and easy to read. Avoid using headings, bold, and italics; use them only when necessary. Prefer paragraphs, unordered lists (ul), and ordered lists (ol) for most of the content.
 
 For the "categoryId" field, use the ID shown in brackets for the selected category.
 
@@ -473,7 +488,7 @@ Please format the response as valid JSON only, without any additional text or ma
                   </div>
 
                   <div className="admin-form-group">
-                    <label>Category (Select one)</label>
+                    <label>Category *</label>
                     <select
                       name="category"
                       value={formData.category}
