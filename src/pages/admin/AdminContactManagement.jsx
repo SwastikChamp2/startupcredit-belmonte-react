@@ -114,6 +114,7 @@ function AdminContactManagement() {
               <tr>
                 <th>Name</th>
                 <th>Email</th>
+                <th>Phone Number</th>
                 <th>
                   Time
                   <button
@@ -126,6 +127,7 @@ function AdminContactManagement() {
                   </button>
                 </th>
                 <th>Subject</th>
+                <th>Message</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -139,9 +141,15 @@ function AdminContactManagement() {
                     </div>
                   </td>
                   <td>{inquiry.email || 'Not provided'}</td>
+                  <td>{inquiry.mobile || 'Not provided'}</td>
                   <td>{inquiry.submittedAt}</td>
                   <td>
                     <strong className="admin-contact-subject">{inquiry.subject || 'No subject'}</strong>
+                  </td>
+                  <td>
+                    <div className="admin-contact-message" title={inquiry.message || ''}>
+                      {inquiry.message || 'No message'}
+                    </div>
                   </td>
                   <td>
                     <div className="admin-user-actions">

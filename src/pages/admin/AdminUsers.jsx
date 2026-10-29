@@ -9,6 +9,7 @@ import {
   deleteAdminUser,
 } from '../../services/adminDataApi'
 import { useFirestoreCollection } from '../../hooks/useFirestoreSnapshot'
+import { formatPhoneNumber } from '../../../utils/phoneUtils'
 
 function getInitials(name) {
   return name
@@ -51,11 +52,12 @@ function AdminUsers() {
         ? users
         : users.filter((user) => user.status === statusFilter)
 
-    let result = query 
+    let result = query
       ? usersByStatus.filter(
           (user) =>
             user.name.toLowerCase().includes(query) ||
-            user.email.toLowerCase().includes(query),
+            user.email.toLowerCase().includes(query) ||
+            formatPhoneNumber(user.countryCode, user.phoneNumber).toLowerCase().includes(query),
         )
       : usersByStatus
 
@@ -149,9 +151,9 @@ function AdminUsers() {
           <label className="admin-users-search">
             <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
             <input
-              aria-label="Search users by name or email"
+              aria-label="Search users by name, email, or phone number"
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search by name or email..."
+              placeholder="Search by name, email, or phone..."
               type="search"
               value={searchTerm}
             />
@@ -164,6 +166,7 @@ function AdminUsers() {
               <tr>
                 <th>Name</th>
                 <th>Email</th>
+                <th>Phone Number</th>
                 <th>
                   Date Created
                   <button
@@ -189,6 +192,7 @@ function AdminUsers() {
                     </div>
                   </td>
                   <td>{user.email}</td>
+                  <td>{formatPhoneNumber(user.countryCode, user.phoneNumber) || '—'}</td>
                   <td>{user.createdAt || '—'}</td>
                   <td>
                     <span className={`admin-status ${user.status.toLowerCase()}`}>

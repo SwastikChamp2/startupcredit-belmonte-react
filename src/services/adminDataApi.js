@@ -142,6 +142,8 @@ export const adaptUserForAdmin = (raw) => {
     name: (raw.name || '').trim() || fallbackName,
     email: raw.email || '',
     provider: raw.provider || 'password',
+    countryCode: raw.countryCode || '',
+    phoneNumber: raw.phoneNumber || '',
     createdAt: formatTimestamp(raw.createdAt),
     status: raw.disabled ? 'Disabled' : 'Active',
   }
@@ -243,6 +245,10 @@ export const adaptProjectForAdmin = (raw) => {
   const classLabel = joinCodeLabel('Class', cls.code || raw.classCode, cls.name || raw.className, raw.projectClass)
   const nicLabel = joinCodeLabel('NIC', nic.code || raw.nicCode, nic.name || raw.nicName, raw.nicCode)
 
+  const clientPhone = raw.clientPhone || ''
+  const countryCode = raw.countryCode || ''
+  const phoneNumber = raw.phoneNumber || ''
+
   return {
     id: raw.id,
     projectTitle: raw.projectTitle || '',
@@ -272,7 +278,7 @@ export const adaptProjectForAdmin = (raw) => {
     associateEmail: raw.associateEmail || '',
     clientName: raw.clientName || submitter.name,
     clientEmail: raw.clientEmail || submitter.email,
-    clientPhone: raw.clientPhone || '',
+    clientPhone: clientPhone || (countryCode && phoneNumber ? `+${countryCode} ${phoneNumber}` : ''),
     notes: raw.notes || '',
     documents: Array.isArray(raw.documents) ? raw.documents : [],
     history: Array.isArray(raw.history) ? raw.history : [],

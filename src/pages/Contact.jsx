@@ -1,22 +1,32 @@
 import { useState } from 'react'
 import PageHeader from '../components/PageHeader'
 import SubmissionModal from '../components/SubmissionModal'
+import CountryCodeSelect from '../components/CountryCodeSelect'
 import { submitContactInquiry } from '../services/formsApi'
+import '../styles/auth-modal.css'
 
 function Contact() {
   const [errorMsg, setErrorMsg] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [showModal, setShowModal] = useState(false)
+  const [countryCode, setCountryCode] = useState('91')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setErrorMsg('')
 
     const formData = new FormData(e.target)
+    const phoneNumber = String(formData.get('mobile') || '').trim()
+
+    if (phoneNumber.length !== 10) {
+      setErrorMsg('Please enter a valid 10-digit phone number.')
+      return
+    }
+
     const payload = {
       name: String(formData.get('fullname') || '').trim(),
       email: String(formData.get('email') || '').trim(),
-      mobile: String(formData.get('mobile') || '').trim(),
+      mobile: `+${countryCode} ${phoneNumber}`,
       subject: String(formData.get('subject') || '').trim(),
       message: String(formData.get('message') || '').trim(),
     }
@@ -26,6 +36,7 @@ function Contact() {
       await submitContactInquiry(payload)
       setShowModal(true)
       e.target.reset()
+      setCountryCode('91')
     } catch (err) {
       setErrorMsg(err?.message || 'Could not send your message. Please try again.')
     } finally {
@@ -56,27 +67,38 @@ function Contact() {
                     <div className="form-group row">
                       <div className="col-md-6">
                         <div className="form-item">
-                          <input type="text" id="fullname" name="fullname" className="form-control" placeholder="Your Name" />
+                          <input type="text" id="fullname" name="fullname" className="form-control" placeholder="Your Name" required />
                           <div className="icon"><i className="fas fa-user" /></div>
                         </div>
                       </div>
                       <div className="col-md-6">
                         <div className="form-item">
-                          <input type="email" id="email" name="email" className="form-control" placeholder="Your Email" />
+                          <input type="email" id="email" name="email" className="form-control" placeholder="Your Email" required />
                           <div className="icon"><i className="fas fa-envelope" /></div>
                         </div>
                       </div>
                     </div>
                     <div className="form-group row">
-                      <div className="col-md-6">
-                        <div className="form-item">
-                          <input type="tel" id="mobile" name="mobile" className="form-control" placeholder="Mobile Number" />
-                          <div className="icon"><i className="fas fa-phone" /></div>
+                      <div className="col-md-12">
+                        <div className="form-item phone-input-group">
+                          <CountryCodeSelect value={countryCode} onChange={setCountryCode} className="contact-form" />
+                          <input
+                            type="tel"
+                            id="mobile"
+                            name="mobile"
+                            className="form-control"
+                            placeholder="10-digit number"
+                            required
+                            maxLength={10}
+                            minLength={10}
+                          />
                         </div>
                       </div>
-                      <div className="col-md-6">
+                    </div>
+                    <div className="form-group row">
+                      <div className="col-md-12">
                         <div className="form-item">
-                          <input type="text" id="subject" name="subject" className="form-control" placeholder="Subject" />
+                          <input type="text" id="subject" name="subject" className="form-control" placeholder="Subject" required />
                           <div className="icon"><i className="fas fa-heading" /></div>
                         </div>
                       </div>
@@ -84,7 +106,7 @@ function Contact() {
                     <div className="form-group row">
                       <div className="col-md-12">
                         <div className="form-item message-item">
-                          <textarea id="message" name="message" cols={30} rows={5} className="form-control address" placeholder="Message" defaultValue={""} />
+                          <textarea id="message" name="message" cols={30} rows={5} className="form-control address" placeholder="Message" required defaultValue={""} />
                           <div className="icon"><i className="fas fa-comment-dots" /></div>
                         </div>
                       </div>

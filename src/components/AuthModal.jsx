@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useAuth } from '../hooks/useAuth'
+import CountryCodeSelect from './CountryCodeSelect'
 import '../styles/auth-modal.css'
 
-const initialForm = { name: '', email: '', password: '', confirm: '' }
+const initialForm = { name: '', email: '', password: '', confirm: '', countryCode: '91', phoneNumber: '' }
 
 function AuthModal({ open, mode = 'login', onClose, onSwitchMode }) {
   const { login, signup, loginWithGoogle, resendVerification } = useAuth()
@@ -59,6 +60,11 @@ function AuthModal({ open, mode = 'login', onClose, onSwitchMode }) {
       return
     }
 
+    if (isSignup && form.phoneNumber.length !== 10) {
+      setError('Please enter a valid 10-digit phone number.')
+      return
+    }
+
     setBusy(true)
     try {
       if (isSignup) {
@@ -66,6 +72,8 @@ function AuthModal({ open, mode = 'login', onClose, onSwitchMode }) {
           email: form.email,
           password: form.password,
           name: form.name,
+          countryCode: form.countryCode,
+          phoneNumber: form.phoneNumber,
         })
         if (result?.pendingVerification) {
           setPending({ email: result.email })
@@ -218,6 +226,31 @@ function AuthModal({ open, mode = 'login', onClose, onSwitchMode }) {
               value={form.email}
             />
           </label>
+
+          {isSignup && (
+            <>
+              <label className="auth-modal__field">
+                <span>Phone Number</span>
+                <div className="phone-input-group">
+                  <CountryCodeSelect
+                    value={form.countryCode}
+                    onChange={(value) => setForm(current => ({ ...current, countryCode: value }))}
+                  />
+                  <input
+                    autoComplete="tel"
+                    name="phoneNumber"
+                    onChange={updateField}
+                    placeholder="10-digit number"
+                    required
+                    type="tel"
+                    value={form.phoneNumber}
+                    maxLength={10}
+                    minLength={10}
+                  />
+                </div>
+              </label>
+            </>
+          )}
 
           <label className="auth-modal__field">
             <span>Password</span>

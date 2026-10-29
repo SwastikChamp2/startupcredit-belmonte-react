@@ -75,6 +75,8 @@ const userFromFirebase = (firebaseUser, doc) => ({
   role: doc?.role || '',
   provider: doc?.provider || (firebaseUser.providerData?.[0]?.providerId === 'google.com' ? 'google' : 'password'),
   emailVerified: firebaseUser.emailVerified,
+  countryCode: doc?.countryCode || '',
+  phoneNumber: doc?.phoneNumber || '',
 })
 
 export function AuthProvider({ children }) {
@@ -142,7 +144,7 @@ export function AuthProvider({ children }) {
     }
   }, [])
 
-  const signup = useCallback(async ({ email, password, name }) => {
+  const signup = useCallback(async ({ email, password, name, countryCode, phoneNumber }) => {
     let credential
     try {
       credential = await createUserWithEmailAndPassword(auth, email, password)
@@ -160,7 +162,7 @@ export function AuthProvider({ children }) {
     // Pre-create the Firestore user doc so admin pages can list this account
     // even before email verification completes.
     try {
-      await upsertUserDoc(fbUser, { name, provider: 'password' })
+      await upsertUserDoc(fbUser, { name, provider: 'password', countryCode, phoneNumber })
     } catch (err) {
       console.warn('upsertUserDoc on signup failed:', err)
     }

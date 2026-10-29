@@ -186,6 +186,8 @@ function SelectProject() {
       submittedByType: submissionType,
       clientName: submissionType === ASSOCIATE_SUBMISSION_TYPE ? clientName : '',
       clientPhone: submissionType === ASSOCIATE_SUBMISSION_TYPE ? clientPhone : '',
+      countryCode: user?.countryCode || '',
+      phoneNumber: user?.phoneNumber || '',
       associateName: submissionType === ASSOCIATE_SUBMISSION_TYPE ? associateData?.name : '',
       associateEmail: submissionType === ASSOCIATE_SUBMISSION_TYPE ? associateData?.email : '',
     }

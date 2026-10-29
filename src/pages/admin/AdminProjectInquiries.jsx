@@ -8,6 +8,7 @@ import {
   updateAdminProjectSubmission,
 } from '../../services/adminDataApi'
 import { useFirestoreCollection } from '../../hooks/useFirestoreSnapshot'
+import { formatPhoneNumber } from '../../../utils/phoneUtils'
 
 function getInitials(name) {
   return String(name || '')
@@ -193,6 +194,7 @@ function AdminProjectInquiries() {
                       <div className="admin-project-cell">
                         <strong>{inquiry.creatorName}</strong>
                         <span>{inquiry.creatorEmail}</span>
+                        {inquiry.clientPhone && <span>{inquiry.clientPhone}</span>}
                       </div>
                     </div>
                   </td>
@@ -279,6 +281,7 @@ function AdminProjectInquiries() {
                   <span>Created By</span>
                   <strong>{selectedInquiry.creatorName}</strong>
                   <p>{selectedInquiry.creatorEmail}</p>
+                  {selectedInquiry.clientPhone && <p>{selectedInquiry.clientPhone}</p>}
                 </div>
                 <div>
                   <span>Inquiry Source</span>
