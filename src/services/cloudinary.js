@@ -1,14 +1,8 @@
-// Direct (browser → Cloudinary) unsigned upload. No backend required.
+// Unsigned Cloudinary upload using an upload preset.
 //
-// Configure in Cloudinary Console → Settings → Upload → Add upload preset:
-//   Signing Mode: Unsigned
-//   Allowed formats: pdf,doc,docx,xls,xlsx,jpg,jpeg,png
-//   Max file size: 10485760 (10 MB)
-//   Use filename / Unique filename: On
-//
-// Then add to .env.local:
-//   VITE_CLOUDINARY_CLOUD_NAME=<your cloud name>
-//   VITE_CLOUDINARY_UPLOAD_PRESET=<the preset name above>
+// Add to .env.local (project root):
+//   VITE_CLOUDINARY_CLOUD_NAME=<your_cloud_name>
+//   VITE_CLOUDINARY_UPLOAD_PRESET=<your_unsigned_preset_name>
 
 const CLOUD_NAME = import.meta.env.VITE_CLOUDINARY_CLOUD_NAME
 const UPLOAD_PRESET = import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET
@@ -59,6 +53,7 @@ export const uploadToCloudinary = async (file, folder) => {
   if (!file) throw new Error('No file provided.')
 
   const resourceType = pickResourceType(file)
+
   const fd = new FormData()
   fd.append('file', file)
   fd.append('upload_preset', UPLOAD_PRESET)

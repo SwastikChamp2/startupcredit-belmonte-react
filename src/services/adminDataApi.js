@@ -556,6 +556,13 @@ export const createAdminService = async (form, sectionLookup) => {
 export const updateAdminService = (id, form, sectionLookup) =>
   updateDoc(doc(db, 'services', id), stamped(adminServicePayload(form, sectionLookup)))
 
+export const batchUpdateServiceOrder = async (services) => {
+  const updates = services.map((service) =>
+    updateDoc(doc(db, 'services', service.id), stamped({ sortOrder: service.order }))
+  )
+  await Promise.all(updates)
+}
+
 export const deleteAdminService = (id) => deleteDoc(doc(db, 'services', id))
 
 /* -------------------- Government schemes (admin CRUD) -------------------- */

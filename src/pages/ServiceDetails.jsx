@@ -76,11 +76,11 @@ function ServiceDetails() {
                 <div className="mb-40 rich-text-render" dangerouslySetInnerHTML={{ __html: scheme.page_body }} />
 
                 <div className="service-thumb-wrap">
-                  <div className="service-thumb">
-                    <img src={scheme.feature_image_1} alt={`${scheme.service_name} feature 1`} />
+                  <div className="service-thumb" style={{ borderRadius: '12px', overflow: 'hidden' }}>
+                    <img src={scheme.feature_image_1} alt={`${scheme.service_name} feature 1`} style={{ width: '100%', height: '100%', objectFit: 'fill' }} />
                   </div>
-                  <div className="service-thumb">
-                    <img src={scheme.feature_image_2} alt={`${scheme.service_name} feature 2`} />
+                  <div className="service-thumb" style={{ borderRadius: '12px', overflow: 'hidden' }}>
+                    <img src={scheme.feature_image_2} alt={`${scheme.service_name} feature 2`} style={{ width: '100%', height: '100%', objectFit: 'fill' }} />
                   </div>
                   <ul className="thumb-list">
                     {scheme.feature_bullet_points.map((point, i) => (

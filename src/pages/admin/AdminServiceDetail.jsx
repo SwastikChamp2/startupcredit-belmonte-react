@@ -72,6 +72,9 @@ function AdminServiceDetail() {
           if (data.sections.length > 0) {
             setFormData((prev) => ({ ...prev, category: data.sections[0].title }))
           }
+          // Auto-calculate order as highest order + 1
+          const maxOrder = data.services.reduce((max, service) => Math.max(max, service.order || 0), 0)
+          setFormData((prev) => ({ ...prev, order: maxOrder + 1 }))
         }
       } catch (err) {
         if (!cancelled) setSaveError(err?.message || 'Could not load service.')
@@ -364,12 +367,15 @@ function AdminServiceDetail() {
                 </div>
                 <div className="admin-form-group">
                   <label>Display Order</label>
-                  <input 
+                  <input
                     type="number"
                     name="order"
                     value={formData.order}
                     onChange={handleInputChange}
+                    disabled={!isEdit}
+                    style={!isEdit ? { backgroundColor: '#f1f5f9', cursor: 'not-allowed' } : {}}
                   />
+                  
                 </div>
               </div>
 

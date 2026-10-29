@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import AdminPagination from './AdminPagination'
 import useAdminPagination from './useAdminPagination'
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd'
 import {
   fetchAdminServices,
   deleteAdminService,
@@ -10,6 +11,7 @@ import {
   createServiceSection,
   updateServiceSection,
   deleteServiceSection,
+  batchUpdateServiceOrder,
 } from '../../services/adminDataApi'
 import './admin.css'
 
@@ -40,6 +42,7 @@ function AdminServiceManagement() {
       setServices(data.services)
       setSections(data.sections)
       setSectionLookup(data.sectionLookup)
+      setDragServices(data.services.sort((a, b) => (a.order ?? 0) - (b.order ?? 0)))
     } catch (err) {
       setErrorMsg(err?.message || 'Could not load services.')
     } finally {
@@ -93,7 +96,47 @@ function AdminServiceManagement() {
       return sortOrder === 'desc' ? orderB - orderA : orderA - orderB
     })
   }, [services, searchTerm, categoryFilter, statusFilter, sortOrder])
-  const servicesPagination = useAdminPagination(filteredServices)
+
+  const [dragServices, setDragServices] = useState(filteredServices)
+  const [isDragging, setIsDragging] = useState(false)
+
+  useEffect(() => {
+    setDragServices(filteredServices)
+  }, [filteredServices])
+
+  const handleDragEnd = async (result) => {
+    setIsDragging(false)
+    if (!result.destination) return
+
+    const items = Array.from(dragServices)
+    const [reorderedItem] = items.splice(result.source.index, 1)
+    items.splice(result.destination.index, 0, reorderedItem)
+
+    // Update order values based on new positions
+    const updatedServices = items.map((service, index) => ({
+      ...service,
+      order: index + 1,
+    }))
+
+    setDragServices(updatedServices)
+
+    // Update Firebase with new order values
+    try {
+      await batchUpdateServiceOrder(updatedServices)
+      await reload()
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not update service order.')
+    }
+  }
+
+  const handleDragStart = () => {
+    setIsDragging(true)
+  }
+
+  // Use dragServices for pagination when no filters are applied, otherwise use filteredServices
+  const hasFilters = searchTerm.trim() !== '' || categoryFilter !== 'All Categories' || statusFilter !== 'All Status'
+  const displayServices = hasFilters ? filteredServices : dragServices
+  const servicesPagination = useAdminPagination(displayServices)
 
   if (!isAuthenticated) {
     return <Navigate to="/admin/login" replace />
@@ -210,7 +253,12 @@ function AdminServiceManagement() {
               </div>
 
               <div className="admin-services-actions">
-                <button 
+                {!hasFilters && displayServices.length > 0 && (
+                  <span style={{ fontSize: '12px', color: '#64748b', marginRight: '12px', display: 'flex', alignItems: 'center' }}>
+                    <i className="fa-solid fa-grip-vertical" style={{ marginRight: '4px' }}></i> Drag to reorder
+                  </span>
+                )}
+                <button
                   className="admin-add-service-btn"
                   onClick={() => navigate('/admin/services/new')}
                 >
@@ -220,111 +268,133 @@ function AdminServiceManagement() {
             </div>
 
             <div className="admin-users-table-wrap">
-              <table className="admin-users-table admin-services-table">
-                <thead>
-                  <tr>
-                    <th>Service Name</th>
-                    <th>Category</th>
-                    <th>Status</th>
-                    <th>
-                      Order{' '}
-                      <button
-                        onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px' }}
-                        aria-label="Toggle sort order"
-                        type="button"
-                      >
-                        <i className={`fa-solid fa-arrow-${sortOrder === 'desc' ? 'down' : 'up'}`} aria-hidden="true" style={{ color: 'var(--text-light)' }}></i>
-                      </button>
-                    </th>
-                    <th>Last Updated</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {servicesPagination.paginatedItems.map((service) => (
-                    <tr key={service.id}>
-                      <td>
-                        <div className="admin-service-cell-info">
-                          <img src={service.image} alt="" className="admin-service-thumb" />
-                          <div>
-                            <strong>{service.name}</strong>
-                            <span>{service.slug}</span>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <span className="admin-service-cat-badge">{service.category}</span>
-                      </td>
-                      <td>
-                        <span className={`admin-service-status-badge ${service.status.toLowerCase()}`}>
-                          {service.status}
-                        </span>
-                      </td>
-                      <td>{service.order}</td>
-                      <td>{service.lastUpdated}</td>
-                      <td>
-                        <div className="admin-user-actions">
-                          <button 
-                            type="button"
-                            onClick={() => navigate(`/admin/services/${service.id}`)}
-                          >
-                            Edit
-                          </button>
-                          <div style={{ position: 'relative' }}>
-                            <button 
-                              className="admin-more-btn"
-                              onClick={() => setOpenMenuId(openMenuId === service.id ? null : service.id)}
-                            >
-                              <i className="fa-solid fa-ellipsis-vertical"></i>
-                            </button>
-                            {openMenuId === service.id && (
-                              <div style={{
-                                position: 'absolute',
-                                right: 0,
-                                top: '100%',
-                                background: '#fff',
-                                border: '1px solid #e2e8f0',
-                                borderRadius: '6px',
-                                padding: '4px',
-                                boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
-                                zIndex: 50,
-                                minWidth: '140px',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '2px'
-                              }}>
-                                <button
-                                  style={{ padding: '8px 12px', background: 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', width: '100%', fontSize: '13px', borderRadius: '4px', color: '#334155' }}
-                                  onMouseOver={(e) => e.target.style.background = '#f1f5f9'}
-                                  onMouseOut={(e) => e.target.style.background = 'transparent'}
-                                  onClick={() => handleToggleStatus(service)}
-                                >
-                                  {service.status === 'Published' ? 'Change to Draft' : 'Publish'}
-                                </button>
-                                <button 
-                                  style={{ padding: '8px 12px', background: 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', color: '#ef4444', width: '100%', fontSize: '13px', borderRadius: '4px' }}
-                                  onMouseOver={(e) => e.target.style.background = '#fef2f2'}
-                                  onMouseOut={(e) => e.target.style.background = 'transparent'}
-                                  onClick={() => handleDeleteClick(service.id)}
-                                >
-                                  Delete
-                                </button>
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </td>
+              <DragDropContext onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+                <table className="admin-users-table admin-services-table">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '40px' }}></th>
+                      <th>Service Name</th>
+                      <th>Category</th>
+                      <th>Status</th>
+                      <th>
+                        Order{' '}
+                        <button
+                          onClick={() => setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc')}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 4px' }}
+                          aria-label="Toggle sort order"
+                          type="button"
+                        >
+                          <i className={`fa-solid fa-arrow-${sortOrder === 'desc' ? 'down' : 'up'}`} aria-hidden="true" style={{ color: 'var(--text-light)' }}></i>
+                        </button>
+                      </th>
+                      <th>Last Updated</th>
+                      <th>Actions</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <Droppable droppableId="services" isDropDisabled={hasFilters}>
+                    {(provided) => (
+                      <tbody {...provided.droppableProps} ref={provided.innerRef}>
+                        {servicesPagination.paginatedItems.map((service, index) => (
+                          <Draggable key={service.id} draggableId={service.id} index={index} isDragDisabled={isDragging || hasFilters}>
+                            {(provided, snapshot) => (
+                              <tr
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                style={{
+                                  ...provided.draggableProps.style,
+                                  backgroundColor: snapshot.isDragging ? '#f8fafc' : '',
+                                }}
+                              >
+                                <td {...provided.dragHandleProps} style={{ cursor: hasFilters ? 'not-allowed' : 'grab', textAlign: 'center' }}>
+                                  <i className="fa-solid fa-grip-vertical" style={{ color: hasFilters ? '#cbd5e1' : '#94a3b8', fontSize: '16px' }}></i>
+                                </td>
+                                <td>
+                                  <div className="admin-service-cell-info">
+                                    <img src={service.image} alt="" className="admin-service-thumb" />
+                                    <div>
+                                      <strong>{service.name}</strong>
+                                      <span>{service.slug}</span>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td>
+                                  <span className="admin-service-cat-badge">{service.category}</span>
+                                </td>
+                                <td>
+                                  <span className={`admin-service-status-badge ${service.status.toLowerCase()}`}>
+                                    {service.status}
+                                  </span>
+                                </td>
+                                <td>{service.order}</td>
+                                <td>{service.lastUpdated}</td>
+                                <td>
+                                  <div className="admin-user-actions">
+                                    <button
+                                      type="button"
+                                      onClick={() => navigate(`/admin/services/${service.id}`)}
+                                    >
+                                      Edit
+                                    </button>
+                                    <div style={{ position: 'relative' }}>
+                                      <button
+                                        className="admin-more-btn"
+                                        onClick={() => setOpenMenuId(openMenuId === service.id ? null : service.id)}
+                                      >
+                                        <i className="fa-solid fa-ellipsis-vertical"></i>
+                                      </button>
+                                      {openMenuId === service.id && (
+                                        <div style={{
+                                          position: 'absolute',
+                                          right: 0,
+                                          top: '100%',
+                                          background: '#fff',
+                                          border: '1px solid #e2e8f0',
+                                          borderRadius: '6px',
+                                          padding: '4px',
+                                          boxShadow: '0 4px 6px -1px rgba(0,0,0,0.1)',
+                                          zIndex: 50,
+                                          minWidth: '140px',
+                                          display: 'flex',
+                                          flexDirection: 'column',
+                                          gap: '2px'
+                                        }}>
+                                          <button
+                                            style={{ padding: '8px 12px', background: 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', width: '100%', fontSize: '13px', borderRadius: '4px', color: '#334155' }}
+                                            onMouseOver={(e) => e.target.style.background = '#f1f5f9'}
+                                            onMouseOut={(e) => e.target.style.background = 'transparent'}
+                                            onClick={() => handleToggleStatus(service)}
+                                          >
+                                            {service.status === 'Published' ? 'Change to Draft' : 'Publish'}
+                                          </button>
+                                          <button
+                                            style={{ padding: '8px 12px', background: 'transparent', border: 'none', textAlign: 'left', cursor: 'pointer', color: '#ef4444', width: '100%', fontSize: '13px', borderRadius: '4px' }}
+                                            onMouseOver={(e) => e.target.style.background = '#fef2f2'}
+                                            onMouseOut={(e) => e.target.style.background = 'transparent'}
+                                            onClick={() => handleDeleteClick(service.id)}
+                                          >
+                                            Delete
+                                          </button>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </td>
+                              </tr>
+                            )}
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
+                      </tbody>
+                    )}
+                  </Droppable>
+                </table>
+              </DragDropContext>
             </div>
 
             <AdminPagination
               {...servicesPagination}
               itemLabel="services"
-              totalRecords={services.length}
+              totalRecords={displayServices.length}
             />
 
           </>
