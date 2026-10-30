@@ -57,8 +57,9 @@ function App() {
       <Route path="/admin/government-schemes/:schemeId" element={<AdminGovernmentSchemeDetail />} />
       <Route path="/admin/government-schemes/:schemeId/view" element={<AdminGovernmentSchemeView />} />
       <Route element={<Layout />}>
-        <Route path="/" element={<Home />} />
-        <Route path="/test" element={<Test />} />
+      <Route path="/" element={<Home />} />
+        {/* Comment out the test path when in prod */}
+        {/* <Route path="/test" element={<Test />} /> */}
         <Route path="/about" element={<About />} />
         <Route path="/service" element={<Service />} />
         <Route path="/service-details" element={<ServiceDetails />} />

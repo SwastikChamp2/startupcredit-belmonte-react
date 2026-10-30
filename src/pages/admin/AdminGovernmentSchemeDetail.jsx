@@ -544,7 +544,9 @@ For bulk creation, provide an array of such JSON objects: [{...}, {...}, {...}]`
           <i className="fa-solid fa-arrow-left" aria-hidden="true"></i>
           Back
         </button>
-        <div className="view-mode-toggle">
+
+
+        {/* <div className="view-mode-toggle">
           <button
             className={`toggle-btn ${viewMode === 'ui' ? 'active' : ''}`}
             onClick={() => handleToggleView('ui')}
@@ -568,7 +570,9 @@ For bulk creation, provide an array of such JSON objects: [{...}, {...}, {...}]`
               Bulk JSON
             </button>
           )}
-        </div>
+        </div> */}
+
+
       </div>
       <div className="admin-service-detail-container">
         <header className="admin-service-detail-header">
