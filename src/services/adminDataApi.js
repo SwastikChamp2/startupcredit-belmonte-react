@@ -682,6 +682,26 @@ export const createAdminScheme = async (form, categoryLookup) => {
   return { id: ref.id }
 }
 
+export const createAdminSchemesBulk = async (forms, categoryLookup) => {
+  const results = []
+  for (const form of forms) {
+    try {
+      const payload = adminSchemePayload(form, categoryLookup)
+      const id = (form.slug || '').trim() || undefined
+      if (id) {
+        await setDoc(doc(db, 'governmentSchemes', id), stamped(payload))
+        results.push({ success: true, id, name: form.name })
+      } else {
+        const ref = await addDoc(collection(db, 'governmentSchemes'), stamped(payload))
+        results.push({ success: true, id: ref.id, name: form.name })
+      }
+    } catch (err) {
+      results.push({ success: false, error: err.message, name: form.name })
+    }
+  }
+  return results
+}
+
 export const updateAdminScheme = (id, form, categoryLookup) =>
   updateDoc(doc(db, 'governmentSchemes', id), stamped(adminSchemePayload(form, categoryLookup)))
 

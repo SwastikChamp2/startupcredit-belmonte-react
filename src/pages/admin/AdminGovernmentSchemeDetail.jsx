@@ -5,6 +5,7 @@ import {
   fetchAdminScheme,
   fetchAdminSchemes,
   createAdminScheme,
+  createAdminSchemesBulk,
   updateAdminScheme,
   deleteAdminScheme,
 } from '../../services/adminDataApi'
@@ -27,6 +28,8 @@ function AdminGovernmentSchemeDetail() {
   const [jsonText, setJsonText] = useState('')
   const [jsonError, setJsonError] = useState('')
   const [jsonStructureError, setJsonStructureError] = useState('')
+  const [bulkJsonText, setBulkJsonText] = useState('')
+  const [bulkJsonErrors, setBulkJsonErrors] = useState([])
   const [formData, setFormData] = useState({
     name: '',
     fullTitle: '',
@@ -179,7 +182,17 @@ function AdminGovernmentSchemeDetail() {
     if (viewMode === 'json') {
       return !jsonError && !jsonStructureError
     }
+    if (viewMode === 'bulkJson') {
+      return bulkJsonErrors.length === 0 && bulkJsonText.trim() !== ''
+    }
     return REQUIRED_FIELDS.every(key => !!formData[key])
+  }
+
+  const shouldShowCreateButton = () => {
+    if (viewMode === 'bulkJson') {
+      return !isEdit
+    }
+    return true
   }
 
   const handleNextOrSave = async () => {
@@ -197,6 +210,37 @@ function AdminGovernmentSchemeDetail() {
 
     if (viewMode === 'json' && !jsonToFormData(jsonText)) {
       setSaveError('Invalid JSON. Please fix the errors before saving.')
+      return
+    }
+
+    if (viewMode === 'bulkJson') {
+      if (bulkJsonErrors.length > 0) {
+        setSaveError('Please fix JSON errors before saving.')
+        return
+      }
+      if (!bulkJsonText.trim()) {
+        setSaveError('Please enter JSON data.')
+        return
+      }
+      
+      // Bulk create
+      setSaving(true)
+      try {
+        const parsed = JSON.parse(bulkJsonText)
+        const results = await createAdminSchemesBulk(parsed, categoryLookup)
+        
+        const failed = results.filter(r => !r.success)
+        if (failed.length > 0) {
+          setSaveError(`Failed to create ${failed.length} schemes. Check console for details.`)
+          console.error('Bulk creation errors:', failed)
+        } else {
+          navigate('/admin/government-schemes')
+        }
+      } catch (err) {
+        setSaveError(err?.message || 'Could not save schemes.')
+      } finally {
+        setSaving(false)
+      }
       return
     }
     
@@ -314,11 +358,47 @@ function AdminGovernmentSchemeDetail() {
     return ''
   }
 
+  const validateBulkJson = (jsonString) => {
+    const errors = []
+    try {
+      const parsed = JSON.parse(jsonString)
+      
+      if (!Array.isArray(parsed)) {
+        return [{ index: 0, error: 'JSON must be an array of objects' }]
+      }
+
+      parsed.forEach((item, index) => {
+        try {
+          // Check if it's a valid object
+          if (typeof item !== 'object' || item === null || Array.isArray(item)) {
+            errors.push({ index, error: 'Item must be an object' })
+            return
+          }
+
+          // Validate structure
+          const structureError = validateJsonStructure(item)
+          if (structureError) {
+            errors.push({ index, error: structureError })
+          }
+        } catch (err) {
+          errors.push({ index, error: `Invalid object at index ${index}: ${err.message}` })
+        }
+      })
+
+      return errors
+    } catch (err) {
+      return [{ index: 0, error: `Invalid JSON array: ${err.message}` }]
+    }
+  }
+
   const handleToggleView = (mode) => {
     if (mode === 'json') {
       setJsonText(formDataToJson())
       setJsonError('')
       setJsonStructureError('')
+    } else if (mode === 'bulkJson') {
+      setBulkJsonText('')
+      setBulkJsonErrors([])
     } else {
       if (jsonError) {
         return
@@ -352,6 +432,12 @@ function AdminGovernmentSchemeDetail() {
       setJsonError(`Invalid JSON: ${err.message}`)
       setJsonStructureError('')
     }
+  }
+
+  const handleBulkJsonChange = (e) => {
+    setBulkJsonText(e.target.value)
+    const errors = validateBulkJson(e.target.value)
+    setBulkJsonErrors(errors)
   }
 
   const loadDefaultTemplate = () => {
@@ -432,7 +518,9 @@ Example of a properly formatted government scheme (Startup India Seed Fund Schem
 
 <EXPLAIN YOUR GOVERNMENT SCHEME HERE>
 
-Please format the response as valid JSON only, without any additional text or markdown formatting.`
+Please format the response as valid JSON only, without any additional text or markdown formatting.
+
+For bulk creation, provide an array of such JSON objects: [{...}, {...}, {...}]`
     
     navigator.clipboard.writeText(prompt).then(() => {
       alert('AI Prompt copied to clipboard!')
@@ -471,6 +559,15 @@ Please format the response as valid JSON only, without any additional text or ma
           >
             JSON
           </button>
+          {!isEdit && (
+            <button
+              className={`toggle-btn ${viewMode === 'bulkJson' ? 'active' : ''}`}
+              onClick={() => handleToggleView('bulkJson')}
+              type="button"
+            >
+              Bulk JSON
+            </button>
+          )}
         </div>
       </div>
       <div className="admin-service-detail-container">
@@ -479,7 +576,7 @@ Please format the response as valid JSON only, without any additional text or ma
             <h2>{formData.name || 'New Scheme'}</h2>
           </div>
           <div className="admin-service-detail-tabs">
-            {['Overview', 'Objective', 'Benefits', 'Beneficiary', 'Eligibility', 'Description', 'SEO', 'Settings'].map(tab => (
+            {viewMode !== 'bulkJson' && ['Overview', 'Objective', 'Benefits', 'Beneficiary', 'Eligibility', 'Description', 'SEO', 'Settings'].map(tab => (
               <button 
                 key={tab}
                 className={activeTab === tab ? 'active' : ''}
@@ -530,6 +627,46 @@ Please format the response as valid JSON only, without any additional text or ma
                 <div style={{ padding: '10px 16px', margin: '0 18px', color: '#b45309', background: '#fef3c7', borderRadius: 8, fontSize: 13 }}>
                   <i className="fa-solid fa-triangle-exclamation"></i>
                   {jsonStructureError}
+                </div>
+              )}
+            </div>
+          ) : viewMode === 'bulkJson' ? (
+            <div className="json-editor-container">
+              <div className="json-editor-header">
+                <h3>Bulk JSON Editor</h3>
+                <div className="json-editor-actions">
+                  <button
+                    className="json-action-btn"
+                    onClick={copyAIPrompt}
+                    type="button"
+                  >
+                    <i className="fa-solid fa-copy"></i> Copy AI Prompt
+                  </button>
+                </div>
+              </div>
+              <textarea
+                className="json-textarea"
+                value={bulkJsonText}
+                onChange={handleBulkJsonChange}
+                placeholder="Paste an array of JSON objects here... e.g. [{...}, {...}, {...}]"
+                spellCheck="false"
+                style={{ minHeight: '400px' }}
+              />
+              {bulkJsonErrors.length > 0 && (
+                <div style={{ padding: '10px 16px', margin: '0 18px', color: '#b91c1c', background: '#fef2f2', borderRadius: 8, fontSize: 13 }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '8px' }}>
+                    <i className="fa-solid fa-circle-exclamation"></i> JSON Validation Errors:
+                  </div>
+                  {bulkJsonErrors.map((err, idx) => (
+                    <div key={idx} style={{ marginBottom: '4px' }}>
+                      • Item #{err.index + 1}: {err.error}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {bulkJsonErrors.length === 0 && bulkJsonText.trim() && (
+                <div style={{ padding: '10px 16px', margin: '0 18px', color: '#15803d', background: '#f0fdf4', borderRadius: 8, fontSize: 13 }}>
+                  <i className="fa-solid fa-circle-check"></i> All JSONs are valid. Ready to create {JSON.parse(bulkJsonText).length} schemes.
                 </div>
               )}
             </div>
@@ -733,22 +870,26 @@ Please format the response as valid JSON only, without any additional text or ma
 
         <footer className="admin-service-detail-footer">
           <div className="quick-actions-btns">
-            <button 
-              className="update-scheme-btn" 
-              onClick={handleNextOrSave} 
-              disabled={saving || loading}
-            >
-              {saving ? (
-                <><i className="fa-solid fa-rotate"></i> Saving…</>
-              ) : !isFormValid() ? (
-                'Next'
-              ) : isEdit ? (
-                <><i className="fa-solid fa-floppy-disk"></i> Save</>
-              ) : (
-                <><i className="fa-solid fa-plus"></i> Create</>
-              )}
-            </button>
-            {isEdit && (
+            {shouldShowCreateButton() && (
+              <button 
+                className="update-scheme-btn" 
+                onClick={handleNextOrSave} 
+                disabled={saving || loading}
+              >
+                {saving ? (
+                  <><i className="fa-solid fa-rotate"></i> Saving…</>
+                ) : viewMode === 'bulkJson' ? (
+                  <><i className="fa-solid fa-plus"></i> Bulk Create</>
+                ) : !isFormValid() ? (
+                  'Next'
+                ) : isEdit ? (
+                  <><i className="fa-solid fa-floppy-disk"></i> Save</>
+                ) : (
+                  <><i className="fa-solid fa-plus"></i> Create</>
+                )}
+              </button>
+            )}
+            {isEdit && viewMode !== 'bulkJson' && (
               <button
                 type="button"
                 className="delete-scheme-btn"
