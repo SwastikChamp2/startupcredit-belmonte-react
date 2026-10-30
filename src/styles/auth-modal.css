@@ -444,13 +444,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 40px;
+  height: 40px;
+  padding: 0;
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: #5e6f8a;
-  font-size: 13px;
+  color: #1c65d1;
+  font-size: 16px;
   cursor: pointer;
   transition: background 0.2s ease, color 0.2s ease;
 }
@@ -459,6 +460,12 @@
   background: rgba(217, 31, 50, 0.1);
   color: #d91f32;
 }
+
+.header-auth-user__logout-icon:focus-visible {
+  outline: 2px solid #2cb6f7;
+  outline-offset: 2px;
+}
+
 
 @media (max-width: 991px) {
   .header-auth-actions {
@@ -471,6 +478,15 @@
     padding: 0 12px;
     font-size: 12px;
   }
+
+
+  .header-auth-user__logout-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+  }
+
+
 }
 
 @media (max-width: 575px) {

@@ -33,6 +33,7 @@ function Header() {
         className="header-auth-user__logout-icon"
         onClick={() => logout()}
         title="Logout"
+        aria-label="Logout"
       >
         <i className="fa-solid fa-right-from-bracket" />
       </button>
