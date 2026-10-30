@@ -26,6 +26,7 @@ function AdminGovernmentSchemeDetail() {
   const [viewMode, setViewMode] = useState('ui')
   const [jsonText, setJsonText] = useState('')
   const [jsonError, setJsonError] = useState('')
+  const [jsonStructureError, setJsonStructureError] = useState('')
   const [formData, setFormData] = useState({
     name: '',
     fullTitle: '',
@@ -174,13 +175,23 @@ function AdminGovernmentSchemeDetail() {
     'eligibilityCriteria',
     'description'
   ]
-  const isFormValid = () => REQUIRED_FIELDS.every(key => !!formData[key])
+  const isFormValid = () => {
+    if (viewMode === 'json') {
+      return !jsonError && !jsonStructureError
+    }
+    return REQUIRED_FIELDS.every(key => !!formData[key])
+  }
 
   const handleNextOrSave = async () => {
     setSaveError('')
     
     if (viewMode === 'json' && jsonError) {
       setSaveError('Please fix JSON errors before saving.')
+      return
+    }
+
+    if (viewMode === 'json' && jsonStructureError) {
+      setSaveError('Please fix JSON structure errors before saving.')
       return
     }
 
@@ -261,12 +272,58 @@ function AdminGovernmentSchemeDetail() {
     }
   }
 
+  const validateJsonStructure = (parsedJson) => {
+    const templateFields = [
+      'name',
+      'fullTitle',
+      'slug',
+      'status',
+      'order',
+      'category',
+      'categoryId',
+      'highlights',
+      'tags',
+      'image',
+      'objective',
+      'benefits',
+      'beneficiary',
+      'eligibilityCriteria',
+      'description',
+      'content',
+      'documents',
+      'sections',
+      'seoTitle',
+      'seoDescription'
+    ]
+
+    const parsedKeys = Object.keys(parsedJson)
+    const missingFields = templateFields.filter(field => !parsedKeys.includes(field))
+    const extraFields = parsedKeys.filter(key => !templateFields.includes(key))
+
+    if (missingFields.length > 0 || extraFields.length > 0) {
+      let errorMsg = ''
+      if (missingFields.length > 0) {
+        errorMsg += `Missing fields: ${missingFields.join(', ')}. `
+      }
+      if (extraFields.length > 0) {
+        errorMsg += `Extra fields not allowed: ${extraFields.join(', ')}. `
+      }
+      return errorMsg
+    }
+
+    return ''
+  }
+
   const handleToggleView = (mode) => {
     if (mode === 'json') {
       setJsonText(formDataToJson())
       setJsonError('')
+      setJsonStructureError('')
     } else {
       if (jsonError) {
+        return
+      }
+      if (jsonStructureError) {
         return
       }
       if (!jsonToFormData(jsonText)) {
@@ -279,10 +336,21 @@ function AdminGovernmentSchemeDetail() {
   const handleJsonChange = (e) => {
     setJsonText(e.target.value)
     try {
-      JSON.parse(e.target.value)
+      const parsed = JSON.parse(e.target.value)
       setJsonError('')
+      
+      // Validate structure
+      const structureError = validateJsonStructure(parsed)
+      if (structureError) {
+        setJsonStructureError(structureError)
+      } else {
+        setJsonStructureError('')
+        // Automatically update formData when JSON is valid and has correct structure
+        setFormData(prev => ({ ...prev, ...parsed }))
+      }
     } catch (err) {
       setJsonError(`Invalid JSON: ${err.message}`)
+      setJsonStructureError('')
     }
   }
 
@@ -311,11 +379,12 @@ function AdminGovernmentSchemeDetail() {
       documents: ['Certificate of Incorporation', 'PAN Card', 'Aadhar Card of Directors', 'Business Plan', 'Pitch Deck'],
       sections: [],
       seoTitle: 'Startup India Seed Fund Scheme - Government Funding for Startups',
-      seoDescription: 'Apply for Startup India Seed Fund Scheme (SISFS) to get seed funding up to ₹20 lakh for your early-stage startup. Know eligibility, benefits, and application process.',
-      lastUpdated: new Date().toISOString()
+      seoDescription: 'Apply for Startup India Seed Fund Scheme (SISFS) to get seed funding up to ₹20 lakh for your early-stage startup. Know eligibility, benefits, and application process.'
     }
     setJsonText(JSON.stringify(template, null, 2))
     setJsonError('')
+    setJsonStructureError('')
+    setFormData(prev => ({ ...prev, ...template }))
   }
 
   const copyAIPrompt = () => {
@@ -455,6 +524,12 @@ Please format the response as valid JSON only, without any additional text or ma
                 <div className="json-error-message">
                   <i className="fa-solid fa-circle-exclamation"></i>
                   {jsonError}
+                </div>
+              )}
+              {jsonStructureError && (
+                <div style={{ padding: '10px 16px', margin: '0 18px', color: '#b45309', background: '#fef3c7', borderRadius: 8, fontSize: 13 }}>
+                  <i className="fa-solid fa-triangle-exclamation"></i>
+                  {jsonStructureError}
                 </div>
               )}
             </div>
