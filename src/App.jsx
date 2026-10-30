@@ -32,6 +32,7 @@ import AdminGovernmentSchemeDetail from './pages/admin/AdminGovernmentSchemeDeta
 import AdminServiceView from './pages/admin/AdminServiceView'
 import AdminGovernmentSchemeView from './pages/admin/AdminGovernmentSchemeView'
 import AdminMigration from './pages/admin/AdminMigration'
+import Test from './pages/Test'
 
 function App() {
   return (
@@ -57,6 +58,7 @@ function App() {
       <Route path="/admin/government-schemes/:schemeId/view" element={<AdminGovernmentSchemeView />} />
       <Route element={<Layout />}>
         <Route path="/" element={<Home />} />
+        <Route path="/test" element={<Test />} />
         <Route path="/about" element={<About />} />
         <Route path="/service" element={<Service />} />
         <Route path="/service-details" element={<ServiceDetails />} />
@@ -68,6 +70,7 @@ function App() {
         <Route path="/become-investor" element={<BecomeInvestor />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/terms-conditions" element={<TermsConditions />} />
+        
         <Route path="*" element={<Error />} />
       </Route>
     </Routes>

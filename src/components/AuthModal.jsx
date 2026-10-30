@@ -6,7 +6,7 @@ import '../styles/auth-modal.css'
 const initialForm = { name: '', email: '', password: '', confirm: '', countryCode: '91', phoneNumber: '' }
 
 function AuthModal({ open, mode = 'login', onClose, onSwitchMode }) {
-  const { login, signup, loginWithGoogle, resendVerification } = useAuth()
+  const { login, signup, loginWithGoogle, resendVerification, completeProfile, logout } = useAuth()
   const [form, setForm] = useState(initialForm)
   const [error, setError] = useState('')
   const [info, setInfo] = useState('')
@@ -14,6 +14,7 @@ function AuthModal({ open, mode = 'login', onClose, onSwitchMode }) {
   const [showPassword, setShowPassword] = useState(false)
   const [pending, setPending] = useState(null) // { email, devLink? } when awaiting verification
   const [unverifiedEmail, setUnverifiedEmail] = useState('')
+  const [profileStep, setProfileStep] = useState(null) // { name: bool, phone: bool } = which fields are missing
 
   useEffect(() => {
     if (!open) return
@@ -24,12 +25,13 @@ function AuthModal({ open, mode = 'login', onClose, onSwitchMode }) {
     setShowPassword(false)
     setPending(null)
     setUnverifiedEmail('')
+    setProfileStep(null)
   }, [open, mode])
 
   useEffect(() => {
     if (!open) return undefined
     const onKeyDown = (event) => {
-      if (event.key === 'Escape') onClose?.()
+      if (event.key === 'Escape' && !profileStep) onClose?.()
     }
     document.addEventListener('keydown', onKeyDown)
     document.body.style.overflow = 'hidden'
@@ -37,7 +39,7 @@ function AuthModal({ open, mode = 'login', onClose, onSwitchMode }) {
       document.removeEventListener('keydown', onKeyDown)
       document.body.style.overflow = ''
     }
-  }, [open, onClose])
+  }, [open, onClose, profileStep])
 
   if (!open) return null
 
@@ -63,6 +65,11 @@ function AuthModal({ open, mode = 'login', onClose, onSwitchMode }) {
     setInfo('')
     setUnverifiedEmail('')
 
+    if (isSignup && !form.name.trim()) {
+      setError('Please enter your full name.')
+      return
+    }
+
     if (isSignup && form.password !== form.confirm) {
       setError('Passwords do not match.')
       return
@@ -79,7 +86,7 @@ function AuthModal({ open, mode = 'login', onClose, onSwitchMode }) {
         const result = await signup({
           email: form.email,
           password: form.password,
-          name: form.name,
+          name: form.name.trim(),
           countryCode: form.countryCode,
           phoneNumber: form.phoneNumber,
         })
@@ -122,7 +129,17 @@ function AuthModal({ open, mode = 'login', onClose, onSwitchMode }) {
     setError('')
     setBusy(true)
     try {
-      await loginWithGoogle()
+      const result = await loginWithGoogle()
+      if (result?.needsProfile) {
+        setForm((c) => ({
+          ...c,
+          name: result.name || '',
+          countryCode: result.countryCode || '91',
+          phoneNumber: result.phoneNumber || '',
+        }))
+        setProfileStep({ name: !result.name?.trim(), phone: !result.phoneNumber })
+        return
+      }
       onClose?.()
     } catch (err) {
       setError(err?.message || 'Google sign-in failed.')
@@ -131,13 +148,41 @@ function AuthModal({ open, mode = 'login', onClose, onSwitchMode }) {
     }
   }
 
+  const handleProfileSubmit = async (event) => {
+    event.preventDefault()
+    setError('')
+    setBusy(true)
+    try {
+      await completeProfile({
+        ...(profileStep.name && { name: form.name }),
+        ...(profileStep.phone && { countryCode: form.countryCode, phoneNumber: form.phoneNumber }),
+      })
+      onClose?.()
+    } catch (err) {
+      setError(err?.message || 'Could not save your details.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  // Leaving the profile step means they never finished, so sign them out.
+  const handleClose = () => {
+    if (profileStep) logout()
+    onClose?.()
+  }
+
   return (
-    <div className="auth-modal" role="dialog" aria-modal="true" onClick={onClose}>
+    <div
+      className="auth-modal"
+      role="dialog"
+      aria-modal="true"
+      onClick={profileStep ? undefined : handleClose}
+    >
       <div className="auth-modal__dialog" onClick={(event) => event.stopPropagation()}>
         <button
           aria-label="Close"
           className="auth-modal__close"
-          onClick={onClose}
+          onClick={handleClose}
           type="button"
         >
           <i className="fa-solid fa-xmark" aria-hidden="true" />
@@ -145,14 +190,18 @@ function AuthModal({ open, mode = 'login', onClose, onSwitchMode }) {
 
         <div className="auth-modal__header">
           <h3>
-            {pending
+            {profileStep
+              ? 'Complete your profile'
+              : pending
               ? 'Verify your email'
               : isSignup
               ? 'Create your account'
               : 'Welcome back'}
           </h3>
           <p>
-            {pending
+            {profileStep
+              ? 'We need a few more details before you can continue.'
+              : pending
               ? `We sent a verification link to ${pending.email}. Open the email and click the link to activate your account, then come back here to sign in.`
               : isSignup
               ? 'Sign up to track your projects and inquiries.'
@@ -184,7 +233,56 @@ function AuthModal({ open, mode = 'login', onClose, onSwitchMode }) {
           </div>
         )}
 
-        {!pending && (
+        {profileStep && (
+          <form className="auth-modal__form" onSubmit={handleProfileSubmit}>
+            {profileStep.name && (
+              <label className="auth-modal__field">
+                <span>Full name</span>
+                <input
+                  autoComplete="name"
+                  name="name"
+                  onChange={updateField}
+                  placeholder="Enter your full name"
+                  required
+                  type="text"
+                  value={form.name}
+                />
+              </label>
+            )}
+
+            {profileStep.phone && (
+              <label className="auth-modal__field">
+                <span>Phone Number</span>
+                <div className="phone-input-group">
+                  <CountryCodeSelect
+                    value={form.countryCode}
+                    onChange={(value) => setForm((c) => ({ ...c, countryCode: value }))}
+                  />
+                  <input
+                    autoComplete="tel"
+                    name="phoneNumber"
+                    onInput={handlePhoneInput}
+                    placeholder="10-digit number"
+                    required
+                    type="tel"
+                    value={form.phoneNumber}
+                    maxLength={10}
+                    minLength={10}
+                    pattern="[0-9]{10}"
+                  />
+                </div>
+              </label>
+            )}
+
+            {error && <p className="auth-modal__error">{error}</p>}
+
+            <button className="auth-modal__submit" type="submit" disabled={busy}>
+              {busy ? 'Please wait...' : 'Continue'}
+            </button>
+          </form>
+        )}
+
+        {!pending && !profileStep && (
         <>
         <button
           type="button"
@@ -216,6 +314,7 @@ function AuthModal({ open, mode = 'login', onClose, onSwitchMode }) {
                 name="name"
                 onChange={updateField}
                 placeholder="Enter your full name"
+                required
                 type="text"
                 value={form.name}
               />

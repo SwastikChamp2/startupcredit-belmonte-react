@@ -45,6 +45,9 @@ const wrapFirebaseError = (err) => {
   return wrapped
 }
 
+// Google users must have a name + phone before the app treats them as logged in.
+const needsProfile = (d) => d?.provider === 'google' && (!d?.name?.trim() || !d?.phoneNumber)
+
 // Upsert a Firestore /users/{uid} doc with our app-level fields. Idempotent.
 const upsertUserDoc = async (firebaseUser, extras = {}) => {
   const ref = doc(db, 'users', firebaseUser.uid)
@@ -55,11 +58,11 @@ const upsertUserDoc = async (firebaseUser, extras = {}) => {
   const baseFields = {
     uid: firebaseUser.uid,
     email: (firebaseUser.email || '').toLowerCase(),
-    name: extras.name ?? firebaseUser.displayName ?? '',
+    name: extras.name ?? (snap.data()?.name || firebaseUser.displayName || ''),
     provider,
     emailVerified: Boolean(firebaseUser.emailVerified),
-    countryCode: extras.countryCode || '',
-    phoneNumber: extras.phoneNumber || '',
+    countryCode: extras.countryCode !== undefined ? extras.countryCode : (snap.data()?.countryCode || ''),
+    phoneNumber: extras.phoneNumber !== undefined ? extras.phoneNumber : (snap.data()?.phoneNumber || ''),
   }
   if (snap.exists()) {
     await setDoc(ref, { ...baseFields, updatedAt: serverTimestamp() }, { merge: true })
@@ -109,27 +112,26 @@ export function AuthProvider({ children }) {
         return
       }
       try {
+        const applyDoc = (docData) => {
+          if (docData.disabled) {
+            firebaseSignOut(auth).catch(() => {})
+            setUser(null)
+          } else if (needsProfile(docData)) {
+            // Signed in to Firebase, but app treats them as logged out until profile is complete
+            setUser(null)
+          } else {
+            setUser(userFromFirebase(firebaseUser, docData))
+          }
+        }
+
         // Upsert + check for disabled flag (admin can disable accounts via Firestore).
         const userDoc = await upsertUserDoc(firebaseUser)
-        if (userDoc.disabled) {
-          await firebaseSignOut(auth).catch(() => {})
-          setUser(null)
-        } else {
-          setUser(userFromFirebase(firebaseUser, userDoc))
+        applyDoc(userDoc)
+        if (!userDoc.disabled) {
           unsubscribeUserDoc = onSnapshot(
             doc(db, 'users', firebaseUser.uid),
-            (snap) => {
-              const liveDoc = snap.exists() ? snap.data() : userDoc
-              if (liveDoc.disabled) {
-                firebaseSignOut(auth).catch(() => {})
-                setUser(null)
-                return
-              }
-              setUser(userFromFirebase(firebaseUser, liveDoc))
-            },
-            (err) => {
-              console.warn('user doc subscription failed:', err)
-            }
+            (snap) => applyDoc(snap.exists() ? snap.data() : userDoc),
+            (err) => console.warn('user doc subscription failed:', err)
           )
         }
       } catch (err) {
@@ -147,6 +149,8 @@ export function AuthProvider({ children }) {
   }, [])
 
   const signup = useCallback(async ({ email, password, name, countryCode, phoneNumber }) => {
+    if (!name?.trim()) throw new Error('Please enter your full name.')
+
     let credential
     try {
       credential = await createUserWithEmailAndPassword(auth, email, password)
@@ -227,7 +231,7 @@ export function AuthProvider({ children }) {
       throw err
     }
 
-    return userFromFirebase(fbUser, userDoc)
+    return { ...userFromFirebase(fbUser, userDoc), needsProfile: needsProfile(userDoc) }
   }, [])
 
   const resendVerification = useCallback(async () => {
@@ -246,6 +250,35 @@ export function AuthProvider({ children }) {
     return { delivered: true }
   }, [])
 
+  // Saves the missing name / phone for a signed-in Google user.
+  const completeProfile = useCallback(async ({ name, countryCode, phoneNumber }) => {
+    const fbUser = auth.currentUser
+    if (!fbUser) throw new Error('Session expired. Please sign in again.')
+
+    const data = {}
+    if (name !== undefined) {
+      const clean = name.trim()
+      if (!clean) throw new Error('Please enter your full name.')
+      data.name = clean
+    }
+    if (phoneNumber !== undefined) {
+      if (!/^[0-9]{10}$/.test(phoneNumber)) throw new Error('Please enter a valid 10-digit phone number.')
+      data.countryCode = countryCode
+      data.phoneNumber = phoneNumber
+    }
+
+    try {
+      if (data.name) await updateProfile(fbUser, { displayName: data.name }).catch(() => {})
+      await setDoc(
+        doc(db, 'users', fbUser.uid),
+        { ...data, updatedAt: serverTimestamp() },
+        { merge: true }
+      )
+    } catch (err) {
+      throw wrapFirebaseError(err)
+    }
+  }, [])
+
   const logout = useCallback(async () => {
     await firebaseSignOut(auth).catch(() => {})
     setUser(null)
@@ -261,8 +294,9 @@ export function AuthProvider({ children }) {
       loginWithGoogle,
       logout,
       resendVerification,
+      completeProfile,
     }),
-    [user, authReady, signup, login, loginWithGoogle, logout, resendVerification]
+    [user, authReady, signup, login, loginWithGoogle, logout, resendVerification, completeProfile]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
