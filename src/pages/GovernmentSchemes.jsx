@@ -27,8 +27,8 @@ function GovernmentSchemes() {
     fetchGovernmentSchemes()
       .then((data) => {
         if (cancelled) return
-        console.log('Government Schemes Data:', data)
-        console.log('Schemes:', data.schemes)
+        // console.log('Government Schemes Data:', data)
+        // console.log('Schemes:', data.schemes)
         console.log('Categories:', data.categories)
         console.log('Category Map:', data.categoryMap)
         setGovernmentSchemes(data.schemes)

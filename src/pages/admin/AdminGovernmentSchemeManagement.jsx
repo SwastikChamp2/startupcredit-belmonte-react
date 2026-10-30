@@ -26,12 +26,23 @@ function AdminGovernmentSchemeManagement() {
   const [errorMsg, setErrorMsg] = useState('')
 
   const [newCategory, setNewCategory] = useState('')
+  const [newCategoryId, setNewCategoryId] = useState('')
   const [editingCategory, setEditingCategory] = useState(null)
   const [editingCategoryName, setEditingCategoryName] = useState('')
+  const [editingCategoryId, setEditingCategoryId] = useState('')
   const [openMenuId, setOpenMenuId] = useState(null)
   const [schemeToDelete, setSchemeToDelete] = useState(null)
 
   const categories = useMemo(() => rawCategories.map((c) => c.name), [rawCategories])
+
+  const generateCategoryId = (name) => {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '') // Remove special characters
+      .replace(/\s+/g, '-') // Replace spaces with hyphens
+      .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
+      .trim()
+  }
 
   const reload = useCallback(async () => {
     setLoading(true)
@@ -110,24 +121,41 @@ function AdminGovernmentSchemeManagement() {
   const handleAddCategory = async (e) => {
     e.preventDefault()
     const name = newCategory.trim()
-    if (!name || categories.includes(name)) return
-    try {
-      await createSchemeCategory({ name, sortOrder: rawCategories.length })
+    const id = newCategoryId.trim() || generateCategoryId(name)
+    if (!name || categories.includes(name)) {
       setNewCategory('')
+      setNewCategoryId('')
+      return
+    }
+    // Check if ID already exists
+    if (rawCategories.some((c) => c.id === id)) {
+      setErrorMsg('A category with this ID already exists.')
+      setNewCategory('')
+      setNewCategoryId('')
+      return
+    }
+    try {
+      await createSchemeCategory({ id, name, sortOrder: rawCategories.length })
+      setNewCategory('')
+      setNewCategoryId('')
+      setErrorMsg('')
       await reload()
     } catch (err) {
       setErrorMsg(err?.message || 'Could not add category.')
+      setNewCategory('')
+      setNewCategoryId('')
     }
   }
 
-  const handleDeleteCategory = async (catToDelete) => {
-    const target = rawCategories.find((c) => c.name === catToDelete)
+  const handleDeleteCategory = async (catName) => {
+    const target = rawCategories.find((c) => c.name === catName)
     if (!target) return
     try {
       await deleteSchemeCategory(target.id)
-      if (categoryFilter === catToDelete) setCategoryFilter('All Categories')
+      if (categoryFilter === catName) setCategoryFilter('All Categories')
       setEditingCategory(null)
       setEditingCategoryName('')
+      setEditingCategoryId('')
       await reload()
     } catch (err) {
       setErrorMsg(err?.message || 'Could not delete category.')
@@ -135,24 +163,36 @@ function AdminGovernmentSchemeManagement() {
   }
 
   const startEditCategory = (category) => {
+    const target = rawCategories.find((c) => c.name === category)
     setEditingCategory(category)
     setEditingCategoryName(category)
+    setEditingCategoryId(target?.id || generateCategoryId(category))
+    setErrorMsg('')
   }
 
   const cancelEditCategory = () => {
     setEditingCategory(null)
     setEditingCategoryName('')
+    setEditingCategoryId('')
+    setErrorMsg('')
   }
 
   const saveCategoryEdit = async () => {
     const nextName = editingCategoryName.trim()
+    const nextId = editingCategoryId.trim()
     const target = rawCategories.find((c) => c.name === editingCategory)
     if (!target) return
-    if (!nextName || (nextName !== editingCategory && categories.includes(nextName))) return
+    if (!nextName || !nextId || (nextName !== editingCategory && categories.includes(nextName))) return
+    // Check if new ID already exists (excluding the current category)
+    if (nextId !== target.id && rawCategories.some((c) => c.id === nextId)) {
+      setErrorMsg('A category with this ID already exists.')
+      return
+    }
     try {
-      await updateSchemeCategory(target.id, { name: nextName, sortOrder: target.sortOrder })
+      await updateSchemeCategory(target.id, { id: nextId, name: nextName, sortOrder: target.sortOrder })
       if (categoryFilter === editingCategory) setCategoryFilter(nextName)
       cancelEditCategory()
+      setErrorMsg('')
       await reload()
     } catch (err) {
       setErrorMsg(err?.message || 'Could not update category.')
@@ -345,12 +385,27 @@ function AdminGovernmentSchemeManagement() {
             <div className="admin-category-add-form">
               <h3>Add New Category</h3>
               <form onSubmit={handleAddCategory}>
-                <input 
-                  type="text" 
-                  placeholder="Enter category name..." 
-                  value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value)}
-                />
+                <div className="admin-form-row">
+                  <input
+                    type="text"
+                    placeholder="Enter category name..."
+                    value={newCategory}
+                    onChange={(e) => {
+                      setNewCategory(e.target.value)
+                      setNewCategoryId(generateCategoryId(e.target.value))
+                      setErrorMsg('')
+                    }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Document ID (auto-generated)"
+                    value={newCategoryId}
+                    onChange={(e) => {
+                      setNewCategoryId(e.target.value)
+                      setErrorMsg('')
+                    }}
+                  />
+                </div>
                 <button type="submit" className="admin-add-service-btn">Add Category</button>
               </form>
             </div>
@@ -358,24 +413,40 @@ function AdminGovernmentSchemeManagement() {
             <div className="admin-category-list">
               <h3>Existing Categories</h3>
               <div className="admin-category-grid">
-                {categories.map((cat) => (
-                  <div key={cat} className="admin-category-item">
-                    {editingCategory === cat ? (
-                      <input
-                        autoFocus
-                        onChange={(e) => setEditingCategoryName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveCategoryEdit()
-                          if (e.key === 'Escape') cancelEditCategory()
-                        }}
-                        type="text"
-                        value={editingCategoryName}
-                      />
+                {rawCategories.map((cat) => (
+                  <div key={cat.id} className="admin-category-item">
+                    {editingCategory === cat.name ? (
+                      <div className="admin-category-edit-fields">
+                        <input
+                          autoFocus
+                          placeholder="Category name"
+                          onChange={(e) => setEditingCategoryName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') saveCategoryEdit()
+                            if (e.key === 'Escape') cancelEditCategory()
+                          }}
+                          type="text"
+                          value={editingCategoryName}
+                        />
+                        <input
+                          placeholder="Document ID"
+                          onChange={(e) => setEditingCategoryId(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') saveCategoryEdit()
+                            if (e.key === 'Escape') cancelEditCategory()
+                          }}
+                          type="text"
+                          value={editingCategoryId}
+                        />
+                      </div>
                     ) : (
-                      <span>{cat}</span>
+                      <div className="admin-category-display">
+                        <span className="admin-category-name">{cat.name}</span>
+                        <span className="admin-category-id">{cat.id}</span>
+                      </div>
                     )}
                     <div className="admin-category-actions">
-                      {editingCategory === cat ? (
+                      {editingCategory === cat.name ? (
                         <>
                           <button className="admin-edit-btn" onClick={saveCategoryEdit} type="button">
                             <i className="fa-solid fa-check"></i>
@@ -386,12 +457,12 @@ function AdminGovernmentSchemeManagement() {
                         </>
                       ) : (
                         <>
-                          <button className="admin-edit-btn" onClick={() => startEditCategory(cat)} type="button">
+                          <button className="admin-edit-btn" onClick={() => startEditCategory(cat.name)} type="button">
                             <i className="fa-solid fa-pencil"></i>
                           </button>
-                          <button 
+                          <button
                             className="admin-delete-btn"
-                            onClick={() => handleDeleteCategory(cat)}
+                            onClick={() => handleDeleteCategory(cat.name)}
                             type="button"
                           >
                             <i className="fa-solid fa-trash"></i>

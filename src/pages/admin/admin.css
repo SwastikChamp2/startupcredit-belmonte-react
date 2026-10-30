@@ -2219,7 +2219,7 @@ select.admin-project-status option {
 .admin-categories-view {
   padding: 30px;
   display: grid;
-  grid-template-columns: 350px 1fr;
+  grid-template-columns: 400px 1fr;
   gap: 40px;
 }
 
@@ -2236,48 +2236,84 @@ select.admin-project-status option {
   gap: 15px;
 }
 
+.admin-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  width: 100%;
+}
+
 .admin-category-add-form input {
   height: 44px;
   padding: 0 15px;
   border: 1px solid #d7e0ec;
   border-radius: 7px;
   outline: none;
+  width: 100%;
 }
 
 .admin-category-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
   gap: 15px;
 }
 
 .admin-category-item {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 15px 20px;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px 20px;
   background: #f8faff;
   border: 1px solid #e2e9f3;
   border-radius: 8px;
 }
 
-.admin-category-item span {
-  font-weight: 600;
+.admin-category-display {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.admin-category-name {
+  font-weight: 700;
   color: #34415a;
+  font-size: 15px;
+}
+
+.admin-category-id {
+  font-weight: 400;
+  color: #657287;
+  font-size: 13px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', 'Consolas', monospace;
+}
+
+.admin-category-edit-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+}
+
+.admin-category-edit-fields input {
+  width: 100%;
 }
 
 .admin-category-item input {
   min-width: 0;
-  height: 34px;
+  height: 38px;
   border: 1px solid #d7e0ec;
   border-radius: 7px;
-  padding: 0 10px;
+  padding: 0 12px;
   color: #34415a;
   font: inherit;
+  font-size: 14px;
 }
 
 .admin-category-actions {
   display: flex;
   gap: 8px;
+  justify-content: flex-end;
+  margin-top: 4px;
 }
 
 .admin-category-actions button {

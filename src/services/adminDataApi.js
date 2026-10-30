@@ -16,6 +16,7 @@ import {
   serverTimestamp,
   setDoc,
   updateDoc,
+  runTransaction,
 } from 'firebase/firestore'
 // Admin operations must use the admin Firestore instance (tied to adminAuth)
 // so writes carry the admin's custom-claim token. The public `db` is for the
@@ -722,13 +723,37 @@ export const deleteServiceSection = (id) =>
   deleteDoc(doc(db, 'serviceSections', id))
 
 export const createSchemeCategory = (category) => {
-  const id = (category.id || category.name || '').trim()
-  if (!id) throw new Error('Scheme category requires an id or name.')
+  const id = category.id.trim()
+  if (!id) throw new Error('Scheme category requires an id.')
   return setDoc(doc(db, 'governmentSchemeCategories', id), stamped(category))
 }
 
-export const updateSchemeCategory = (id, category) =>
-  updateDoc(doc(db, 'governmentSchemeCategories', id), stamped(category))
+export const updateSchemeCategory = async (oldId, category) => {
+  const newId = category.id.trim()
+  if (!newId) throw new Error('Scheme category requires an id.')
+
+  // If the ID is being changed, we need to delete the old document and create a new one
+  if (oldId !== newId) {
+    // Use a transaction to ensure atomicity
+    return runTransaction(db, async (transaction) => {
+      const oldDocRef = doc(db, 'governmentSchemeCategories', oldId)
+      const newDocRef = doc(db, 'governmentSchemeCategories', newId)
+
+      // Check if new ID already exists
+      const newDocSnap = await transaction.get(newDocRef)
+      if (newDocSnap.exists()) {
+        throw new Error('A category with this ID already exists.')
+      }
+
+      // Delete old document and create new one
+      transaction.delete(oldDocRef)
+      transaction.set(newDocRef, stamped(category))
+    })
+  }
+
+  // If ID is unchanged, just update the document
+  return updateDoc(doc(db, 'governmentSchemeCategories', oldId), stamped(category))
+}
 
 export const deleteSchemeCategory = (id) =>
   deleteDoc(doc(db, 'governmentSchemeCategories', id))
