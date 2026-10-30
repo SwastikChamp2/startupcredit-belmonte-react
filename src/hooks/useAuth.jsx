@@ -6,7 +6,7 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
   signOut as firebaseSignOut,
-  updateProfile,
+  updateProfile as updateProfileFirebase,
 } from 'firebase/auth'
 import { doc, getDoc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore'
 import { auth, db, googleProvider } from '../firebase'
@@ -160,7 +160,7 @@ export function AuthProvider({ children }) {
     const fbUser = credential.user
     if (name) {
       try {
-        await updateProfile(fbUser, { displayName: name })
+        await updateProfileFirebase(fbUser, { displayName: name })
       } catch {
         // non-fatal
       }
@@ -268,7 +268,7 @@ export function AuthProvider({ children }) {
     }
 
     try {
-      if (data.name) await updateProfile(fbUser, { displayName: data.name }).catch(() => {})
+      if (data.name) await updateProfileFirebase(fbUser, { displayName: data.name }).catch(() => {})
       await setDoc(
         doc(db, 'users', fbUser.uid),
         { ...data, updatedAt: serverTimestamp() },
@@ -284,6 +284,34 @@ export function AuthProvider({ children }) {
     setUser(null)
   }, [])
 
+  const updateProfile = useCallback(async ({ name, countryCode, phoneNumber }) => {
+    const fbUser = auth.currentUser
+    if (!fbUser) throw new Error('Session expired. Please sign in again.')
+
+    const data = {}
+    if (name !== undefined) {
+      const clean = name.trim()
+      if (!clean) throw new Error('Please enter your full name.')
+      data.name = clean
+    }
+    if (phoneNumber !== undefined) {
+      if (!/^[0-9]{10}$/.test(phoneNumber)) throw new Error('Please enter a valid 10-digit phone number.')
+      data.countryCode = countryCode
+      data.phoneNumber = phoneNumber
+    }
+
+    try {
+      if (data.name) await updateProfileFirebase(fbUser, { displayName: data.name }).catch(() => {})
+      await setDoc(
+        doc(db, 'users', fbUser.uid),
+        { ...data, updatedAt: serverTimestamp() },
+        { merge: true }
+      )
+    } catch (err) {
+      throw wrapFirebaseError(err)
+    }
+  }, [])
+
   const value = useMemo(
     () => ({
       user,
@@ -295,8 +323,9 @@ export function AuthProvider({ children }) {
       logout,
       resendVerification,
       completeProfile,
+      updateProfile,
     }),
-    [user, authReady, signup, login, loginWithGoogle, logout, resendVerification, completeProfile]
+    [user, authReady, signup, login, loginWithGoogle, logout, resendVerification, completeProfile, updateProfile]
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

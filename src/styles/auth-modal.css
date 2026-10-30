@@ -160,6 +160,12 @@
   opacity: 1; /* Firefox defaults to 0.54 */
 }
 
+.auth-modal__field__disabled {
+  background: #f8fafc;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 .auth-modal__password-wrap {
   position: relative;
 }
@@ -360,11 +366,8 @@
 .header-auth-user {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   margin-right: 12px;
-  padding: 6px 12px 6px 6px;
-  border-radius: 999px;
-  background: rgba(28, 101, 209, 0.08);
   color: #101d36;
   font-size: 13px;
   font-weight: 600;
@@ -382,6 +385,15 @@
   font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+.header-auth-user__name {
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 1;
 }
 
 .header-auth-user__logout {
@@ -397,6 +409,55 @@
 
 .header-auth-user__logout:hover {
   text-decoration: underline;
+}
+
+.header-auth-user__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 6px;
+  border: 0;
+  border-radius: 999px;
+  background: rgba(28, 101, 209, 0.08);
+  color: #101d36;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.header-auth-user__chip:hover {
+  background: rgba(28, 101, 209, 0.12);
+}
+
+.header-auth-user__edit-icon {
+  font-size: 11px;
+  color: #5e6f8a;
+  transition: color 0.2s ease;
+}
+
+.header-auth-user__chip:hover .header-auth-user__edit-icon {
+  color: #1c65d1;
+}
+
+.header-auth-user__logout-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #5e6f8a;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.header-auth-user__logout-icon:hover {
+  background: rgba(217, 31, 50, 0.1);
+  color: #d91f32;
 }
 
 @media (max-width: 991px) {

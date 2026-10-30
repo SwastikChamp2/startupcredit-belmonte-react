@@ -1,7 +1,9 @@
 import { Link, useLocation } from 'react-router-dom'
+import { useState } from 'react'
 import '../styles/header-fixes.css'
 import { useAuth } from '../hooks/useAuth'
 import { useAuthModal } from '../hooks/useAuthModal'
+import ProfileEditModal from './ProfileEditModal'
 
 function Header() {
   const { pathname } = useLocation()
@@ -10,16 +12,29 @@ function Header() {
 
   const { user, isAuthenticated, logout } = useAuth()
   const { openAuthModal } = useAuthModal()
+  const [isProfileModalOpen, setIsProfileModalOpen] = useState(false)
 
   const initials = (user?.name || user?.email || '?').trim().charAt(0).toUpperCase()
   const displayName = user?.name || user?.email || ''
 
   const authActions = isAuthenticated ? (
     <div className="header-auth-user" title={displayName}>
-      <span className="header-auth-user__avatar">{initials}</span>
-      <span className="header-auth-user__name">{displayName.split('@')[0]}</span>
-      <button type="button" className="header-auth-user__logout" onClick={() => logout()}>
-        Logout
+      <button
+        type="button"
+        className="header-auth-user__chip"
+        onClick={() => setIsProfileModalOpen(true)}
+      >
+        <span className="header-auth-user__avatar">{initials}</span>
+        <span className="header-auth-user__name">{displayName.split('@')[0]}</span>
+        <i className="fa-solid fa-pencil header-auth-user__edit-icon" />
+      </button>
+      <button
+        type="button"
+        className="header-auth-user__logout-icon"
+        onClick={() => logout()}
+        title="Logout"
+      >
+        <i className="fa-solid fa-right-from-bracket" />
       </button>
     </div>
   ) : (
@@ -63,46 +78,42 @@ function Header() {
   )
 
   // About page: header-3 header-4 variant
-  if (isAbout) {
-    return (
-      <header className="header header-3 header-4 sticky-active">
-        <div className="primary-header">
-          <div className="container">
-            <div className="primary-header-inner">
-              <div className="header-logo">
-                <Link to="/">
-                  <img src="assets/img/logo/logo-2.png" alt="Startup Credit logo" />
-                </Link>
-              </div>
-              <div className="inner-left">
-                <div className="header-menu-wrap">
-                  <div className="mobile-menu-items">
-                    {navMenu}
-                  </div>
+  const headerContent = isAbout ? (
+    <header className="header header-3 header-4 sticky-active">
+      <div className="primary-header">
+        <div className="container">
+          <div className="primary-header-inner">
+            <div className="header-logo">
+              <Link to="/">
+                <img src="assets/img/logo/logo-2.png" alt="Startup Credit logo" />
+              </Link>
+            </div>
+            <div className="inner-left">
+              <div className="header-menu-wrap">
+                <div className="mobile-menu-items">
+                  {navMenu}
                 </div>
               </div>
-              <div className="header-right-wrap">
-                <div className="header-right">
-                  <Link to="/contact" className="bz-primary-btn">CONTACT US</Link>
-                  {authActions}
-                  <div className="sidebar-icon-2">
-                    <button className="sidebar-trigger open" onClick={toggleSidebar}>
-                      <span />
-                      <span />
-                      <span />
-                    </button>
-                  </div>
+            </div>
+            <div className="header-right-wrap">
+              <div className="header-right">
+                <Link to="/contact" className="bz-primary-btn">CONTACT US</Link>
+                {authActions}
+                <div className="sidebar-icon-2">
+                  <button className="sidebar-trigger open" onClick={toggleSidebar}>
+                    <span />
+                    <span />
+                    <span />
+                  </button>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </header>
-    )
-  }
-
-  // All other pages: full header with middle-header + primary-header
-  return (
+      </div>
+    </header>
+  ) : (
+    // All other pages: full header with middle-header + primary-header
     <header className="header sticky-active">
       <div className="middle-header">
         <div className="container">
@@ -169,6 +180,13 @@ function Header() {
         </div>
       </div>
     </header>
+  )
+
+  return (
+    <>
+      {headerContent}
+      <ProfileEditModal open={isProfileModalOpen} onClose={() => setIsProfileModalOpen(false)} />
+    </>
   )
 }
 
