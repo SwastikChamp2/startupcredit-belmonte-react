@@ -448,6 +448,31 @@ export const updateAdminContactInquiry = (id, patch) =>
 export const deleteAdminContactInquiry = (id) =>
   deleteDoc(doc(db, 'contactInquiries', id))
 
+/* -------------------- Truck inquiries -------------------- */
+
+export const adaptTruckInquiryForAdmin = (raw) => {
+  if (!raw) return null
+  return {
+    id: raw.id,
+    companyName: raw.companyName || '',
+    name: raw.name || '',
+    email: raw.email || '',
+    mobile: raw.mobile || '',
+    vehicleModel: raw.vehicleModel || '',
+    reeferContainerSize: raw.reeferContainerSize || '',
+    reeferUnit: raw.reeferUnit || '',
+    temperature: raw.temperature ?? '',
+    numberOfTyres: raw.numberOfTyres ?? '',
+    vehicleQuantity: raw.vehicleQuantity ?? '',
+    status: raw.status || 'New',
+    submittedAt: formatTimestamp(raw.submittedAt),
+    notes: raw.notes || '',
+  }
+}
+
+export const deleteAdminTruckInquiry = (id) =>
+  deleteDoc(doc(db, 'truckInquiries', id))
+
 /* -------------------- Services (admin CRUD) -------------------- */
 
 const buildSectionLookup = (sections) => {

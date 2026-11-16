@@ -18,15 +18,14 @@ function Header() {
   const displayName = user?.name || user?.email || ''
 
   const authActions = isAuthenticated ? (
-    <div className="header-auth-user" title={displayName}>
+    <div className="header-auth-user">
       <button
         type="button"
         className="header-auth-user__chip"
         onClick={() => setIsProfileModalOpen(true)}
+        aria-label="Edit profile"
       >
         <span className="header-auth-user__avatar">{initials}</span>
-        <span className="header-auth-user__name">{displayName.split('@')[0]}</span>
-        <i className="fa-solid fa-pencil header-auth-user__edit-icon" />
       </button>
       <button
         type="button"
@@ -73,6 +72,7 @@ function Header() {
       </li>
       <li className={isGovernmentSchemes ? 'active' : ''}><Link to="/government-schemes">GOVERNMENT SCHEME</Link></li>
       <li className={pathname === '/select-project' ? 'active' : ''}><Link to="/select-project">SELECT PROJECT</Link></li>
+      <li className={pathname === '/buy-truck' ? 'active' : ''}><Link to="/buy-truck">BUY TRUCK</Link></li>
       <li className={pathname === '/business-associate' ? 'active' : ''}><Link to="/business-associate">BUSINESS ASSOCIATE</Link></li>
       <li className={pathname === '/become-investor' ? 'active' : ''}><Link to="/become-investor">BECOME INVESTOR</Link></li>
     </ul>

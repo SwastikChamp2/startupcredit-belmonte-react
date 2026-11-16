@@ -92,6 +92,10 @@ function AdminShell({ children, title, subtitle }) {
             <i className="fa-regular fa-envelope" aria-hidden="true"></i>
             Contact Us Management
           </NavLink>
+          <NavLink className="admin-nav-link" to="/admin/truck-inquiries">
+            <i className="fa-solid fa-truck" aria-hidden="true"></i>
+            Truck Inquiry
+          </NavLink>
           <NavLink className="admin-nav-link" to="/admin/services">
             <i className="fa-solid fa-server" aria-hidden="true"></i>
             Service Management

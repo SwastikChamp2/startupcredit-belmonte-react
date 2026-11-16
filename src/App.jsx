@@ -8,6 +8,7 @@ import GovernmentSchemes from './pages/GovernmentSchemes'
 import GovernmentSchemeDetail from './pages/GovernmentSchemeDetail'
 import Contact from './pages/Contact'
 import SelectProject from './pages/SelectProject'
+import BuyTruck from './pages/BuyTruck'
 import BusinessAssociate from './pages/BusinessAssociate'
 import BecomeInvestor from './pages/BecomeInvestor'
 import Error from './pages/Error'
@@ -25,6 +26,7 @@ import AdminBusinessAssociates from './pages/admin/AdminBusinessAssociates'
 import AdminBusinessAssociateDetail from './pages/admin/AdminBusinessAssociateDetail'
 import AdminBusinessAssociateManagement from './pages/admin/AdminBusinessAssociateManagement'
 import AdminContactManagement from './pages/admin/AdminContactManagement'
+import AdminTruckInquiries from './pages/admin/AdminTruckInquiries'
 import AdminServiceManagement from './pages/admin/AdminServiceManagement'
 import AdminServiceDetail from './pages/admin/AdminServiceDetail'
 import AdminGovernmentSchemeManagement from './pages/admin/AdminGovernmentSchemeManagement'
@@ -50,6 +52,7 @@ function App() {
       <Route path="/admin/business-associates/:associateId" element={<AdminBusinessAssociateDetail />} />
       <Route path="/admin/business-associate-management" element={<AdminBusinessAssociateManagement />} />
       <Route path="/admin/contact-us" element={<AdminContactManagement />} />
+      <Route path="/admin/truck-inquiries" element={<AdminTruckInquiries />} />
       <Route path="/admin/services" element={<AdminServiceManagement />} />
       <Route path="/admin/services/:serviceId" element={<AdminServiceDetail />} />
       <Route path="/admin/services/:serviceId/view" element={<AdminServiceView />} />
@@ -67,6 +70,7 @@ function App() {
         <Route path="/government-schemes/:schemeId" element={<GovernmentSchemeDetail />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/select-project" element={<SelectProject />} />
+        <Route path="/buy-truck" element={<BuyTruck />} />
         <Route path="/business-associate" element={<BusinessAssociate />} />
         <Route path="/become-investor" element={<BecomeInvestor />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />

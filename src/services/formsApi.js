@@ -43,6 +43,39 @@ export const submitContactInquiry = async (fields) => {
   return { id: ref.id }
 }
 
+export const submitTruckInquiry = async (fields) => {
+  const vehicleQuantity = Number(fields.vehicleQuantity)
+  const temperature = Number(fields.temperature)
+  if (!Number.isInteger(vehicleQuantity) || vehicleQuantity <= 0) {
+    throw new Error('Vehicle quantity must be a whole number greater than 0.')
+  }
+  if (!Number.isFinite(temperature)) {
+    throw new Error('Please enter a valid temperature.')
+  }
+
+  const user = auth.currentUser
+  const countryCode = (fields.countryCode || '').trim()
+  const phoneNumber = (fields.phoneNumber || '').trim()
+  const ref = await addDoc(collection(db, 'truckInquiries'), {
+    companyName: (fields.companyName || '').trim(),
+    name: (fields.name || '').trim(),
+    email: (user?.email || fields.email || '').trim().toLowerCase(),
+    countryCode,
+    phoneNumber,
+    mobile: countryCode && phoneNumber ? `+${countryCode} ${phoneNumber}` : phoneNumber,
+    vehicleModel: (fields.vehicleModel || '').trim(),
+    reeferContainerSize: (fields.reeferContainerSize || '').trim(),
+    reeferUnit: (fields.reeferUnit || '').trim(),
+    temperature,
+    numberOfTyres: Number(fields.numberOfTyres),
+    vehicleQuantity,
+    status: 'New',
+    notes: '',
+    ...submitterMeta(),
+  })
+  return { id: ref.id }
+}
+
 export const submitProjectInquiry = async (fields) => {
   const type = fields.submittedByType || 'Self'
   const ref = await addDoc(collection(db, 'selectProjectSubmissions'), {
