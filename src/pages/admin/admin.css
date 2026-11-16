@@ -481,6 +481,11 @@
   font-weight: 600;
 }
 
+.admin-user-role-select {
+  width: 140px;
+  min-width: 140px;
+}
+
 .admin-inquiries-toolbar {
   display: grid;
   grid-template-columns: minmax(260px, 1fr) 220px 190px;

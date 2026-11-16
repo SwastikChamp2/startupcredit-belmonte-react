@@ -100,6 +100,7 @@ function AdminUsers() {
 
   const activeUsers = users.filter((user) => user.status === 'Active').length
   const disabledUsers = users.filter((user) => user.status === 'Disabled').length
+  const assignableRoles = ['User', 'Associate', 'Admin']
 
   const toggleDisabled = async (user) => {
     setActionPending(user.id)
@@ -258,22 +259,34 @@ function AdminUsers() {
                   <td>
                     <select
                       aria-label={`Role for ${user.name || user.email}`}
-                      className="admin-filter-select"
+                      className="admin-filter-select admin-user-role-select"
                       disabled={
                         actionPending === user.id ||
                         (adminRole === 'Admin' && ['Admin', 'Super Admin'].includes(user.userRole))
                       }
                       onChange={(event) => changeUserRole(user, event.target.value)}
+                      title={user.userRole}
                       value={user.userRole}
                     >
-                      {user.userRole === 'Super Admin' && (
-                        <option disabled value="Super Admin">Super Admin</option>
-                      )}
-                      <option value="User">User</option>
-                      <option value="Associate">Associate</option>
-                      {(adminRole === 'Super Admin' || user.userRole === 'Admin') && (
-                        <option value="Admin">Admin</option>
-                      )}
+                      {[...new Set([
+                        user.userRole,
+                        'User',
+                        'Associate',
+                        ...(adminRole === 'Super Admin' || user.userRole === 'Admin' ? ['Admin'] : []),
+                        ...(user.userRole === 'Super Admin' ? ['Super Admin'] : []),
+                      ])].map((role) => (
+                        <option
+                          disabled={
+                            (role === user.userRole && !assignableRoles.includes(role)) ||
+                            (role === 'Admin' && adminRole !== 'Super Admin' && user.userRole !== 'Admin') ||
+                            role === 'Super Admin'
+                          }
+                          key={role}
+                          value={role}
+                        >
+                          {role}
+                        </option>
+                      ))}
                     </select>
                   </td>
                   <td>
