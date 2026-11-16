@@ -1,8 +1,5 @@
-// Direct Firestore admin operations — no backend required.
-//
-// All writes happen through the Firebase client SDK and are gated by the
-// Firestore security rules. The admin's writes work only when their Firebase
-// Auth token has the `admin: true` custom claim (see backend/scripts/setAdminClaim.mjs).
+// Direct Firestore admin operations — authorized by the user's profile role
+// in Firestore security rules.
 
 import {
   addDoc,
@@ -18,10 +15,7 @@ import {
   updateDoc,
   runTransaction,
 } from 'firebase/firestore'
-// Admin operations must use the admin Firestore instance (tied to adminAuth)
-// so writes carry the admin's custom-claim token. The public `db` is for the
-// public site (forms / user signup / public reads of reference data).
-import { adminDb as db } from '../firebase'
+import { auth, db } from '../firebase'
 import { uploadToCloudinary } from './cloudinary'
 
 /* -------------------- Document viewer / download helpers -------------------- */
@@ -139,6 +133,7 @@ export const adaptUserForAdmin = (raw) => {
   if (!raw) return null
   const fallbackName = (raw.email || '').split('@')[0] || 'Unnamed user'
   const rawCreatedAt = raw.createdAt
+  const userRole = raw.userRole || raw.role || 'User'
   return {
     id: raw.id || raw.uid,
     name: (raw.name || '').trim() || fallbackName,
@@ -147,6 +142,7 @@ export const adaptUserForAdmin = (raw) => {
     countryCode: raw.countryCode || '',
     phoneNumber: raw.phoneNumber || '',
     emailVerified: Boolean(raw.emailVerified),
+    userRole,
     createdAt: formatTimestamp(raw.createdAt),
     rawCreatedAt: rawCreatedAt,
     status: raw.disabled ? 'Disabled' : 'Active',
@@ -161,8 +157,36 @@ export const fetchAdminUsers = async () => {
 export const setAdminUserDisabled = (id, disabled) =>
   updateDoc(doc(db, 'users', id), stamped({ disabled }))
 
-export const setAdminUserRole = (id, role) =>
-  updateDoc(doc(db, 'users', id), stamped({ role }))
+export const setAdminUserRole = async (id, userRole) => {
+  const actor = auth.currentUser
+  if (!actor) throw new Error('Please sign in again before changing a user role.')
+  if (!['User', 'Associate', 'Admin'].includes(userRole)) {
+    throw new Error('That role cannot be assigned from the website.')
+  }
+
+  const [actorSnap, targetSnap] = await Promise.all([
+    getDoc(doc(db, 'users', actor.uid)),
+    getDoc(doc(db, 'users', id)),
+  ])
+  if (!actorSnap.exists() || !targetSnap.exists()) {
+    throw new Error('Could not find the account needed to update this role.')
+  }
+
+  const actorRole = actorSnap.data().userRole || actorSnap.data().role || 'User'
+  const targetRole = targetSnap.data().userRole || targetSnap.data().role || 'User'
+  if (!['Admin', 'Super Admin'].includes(actorRole)) {
+    throw new Error('Only Admin and Super Admin accounts can change user roles.')
+  }
+  if (actorRole === 'Admin' && (
+    targetRole === 'Admin' ||
+    targetRole === 'Super Admin' ||
+    userRole === 'Admin'
+  )) {
+    throw new Error('Only a Super Admin can promote or demote an Admin account.')
+  }
+
+  await updateDoc(doc(db, 'users', id), stamped({ userRole }))
+}
 
 export const findUserByEmail = async (email) => {
   const q = query(collection(db, 'users'), where('email', '==', email.toLowerCase()))
@@ -276,6 +300,7 @@ export const adaptProjectForAdmin = (raw) => {
     createdAt: formatTimestamp(raw.submittedAt),
     lastUpdated: formatTimestamp(raw.updatedAt || raw.submittedAt),
     submittedByType: normalizeProjectSubmissionType(raw.submittedByType),
+    submittedByUid: raw.submittedBy?.uid || '',
     creatorName: submitter.name,
     creatorEmail: submitter.email,
     associateName: raw.associateName || '',

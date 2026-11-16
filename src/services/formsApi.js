@@ -179,7 +179,10 @@ const blockDuplicateBusinessAssociateApplication = async (fields) => {
   const user = auth.currentUser
   if (user?.uid) {
     const userSnap = await getDoc(doc(db, 'users', user.uid))
-    if (userSnap.exists() && userSnap.data()?.role === 'Associate') {
+    if (
+      userSnap.exists() &&
+      (userSnap.data()?.userRole || userSnap.data()?.role) === 'Associate'
+    ) {
       const err = new Error('You are already a verified business associate.')
       err.code = 'duplicate-business-associate-application'
       err.status = 'Verified'

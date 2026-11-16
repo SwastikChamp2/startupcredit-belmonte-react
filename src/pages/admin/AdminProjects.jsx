@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import AdminPagination from './AdminPagination'
 import AdminStatusDropdown from './AdminStatusDropdown'
@@ -10,6 +10,7 @@ import {
   updateAdminProjectSubmission,
 } from '../../services/adminDataApi'
 import { useFirestoreCollection } from '../../hooks/useFirestoreSnapshot'
+import { useAdminIdentity } from '../../hooks/useAdminIdentity'
 import { formatPhoneNumber } from '../../../utils/phoneUtils'
 
 // Submissions still in inquiry phase don't appear in the project workflow.
@@ -37,7 +38,6 @@ function createHistoryEntry(actionDescription) {
 }
 
 function AdminProjects() {
-  const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
   const navigate = useNavigate()
   const [errorMsg, setErrorMsg] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
@@ -48,13 +48,26 @@ function AdminProjects() {
   const [pendingCompletion, setPendingCompletion] = useState(null)
 
   // Live subscription — every patch from the API propagates instantly.
+  const { user, userRole, loading: identityLoading } = useAdminIdentity()
+  const canLoadProjects =
+    Boolean(user) && ['Admin', 'Super Admin', 'Associate'].includes(userRole)
+  const collectionName = identityLoading || !canLoadProjects
+    ? null
+    : 'selectProjectSubmissions'
   const { items, loading, error: liveError } = useFirestoreCollection(
-    'selectProjectSubmissions',
-    adaptProjectForAdmin
+    collectionName,
+    adaptProjectForAdmin,
+    userRole === 'Associate'
+      ? { whereField: 'submittedBy.uid', whereValue: user?.uid }
+      : {}
   )
+  const dataLoading = identityLoading || loading
   const projects = useMemo(
-    () => items.filter((row) => !INQUIRY_STATUSES.has(row.status)),
-    [items]
+    () => items.filter((row) =>
+      (userRole !== 'Associate' || row.submittedByUid === user?.uid) &&
+      !INQUIRY_STATUSES.has(row.status)
+    ),
+    [items, userRole, user?.uid]
   )
 
   const parseDate = (dateStr) => {
@@ -84,10 +97,6 @@ function AdminProjects() {
     })
   }, [projects, searchTerm, statusFilter, sortOrder])
   const projectsPagination = useAdminPagination(filteredProjects)
-
-  if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace />
-  }
 
   const applyStatusChange = async (projectId, newStatus) => {
     const project = projects.find((p) => p.id === projectId)
@@ -149,7 +158,7 @@ function AdminProjects() {
             {errorMsg || liveError?.message || 'Could not load projects.'}
           </div>
         )}
-        {loading && (
+        {dataLoading && (
           <div className="admin-loader-container">
             <div className="admin-loader"></div>
             <span>Loading projects...</span>
@@ -265,7 +274,7 @@ function AdminProjects() {
             </tbody>
           </table>
 
-          {filteredProjects.length === 0 && (
+          {!dataLoading && filteredProjects.length === 0 && (
             <div className="admin-users-empty">
               <i className="fa-regular fa-folder-open" aria-hidden="true"></i>
               <strong>No active projects found</strong>

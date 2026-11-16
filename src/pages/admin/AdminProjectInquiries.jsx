@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { Navigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import AdminPagination from './AdminPagination'
 import useAdminPagination from './useAdminPagination'
@@ -8,6 +7,7 @@ import {
   updateAdminProjectSubmission,
 } from '../../services/adminDataApi'
 import { useFirestoreCollection } from '../../hooks/useFirestoreSnapshot'
+import { useAdminIdentity } from '../../hooks/useAdminIdentity'
 import { formatPhoneNumber } from '../../../utils/phoneUtils'
 
 function getInitials(name) {
@@ -30,7 +30,6 @@ function getStatusClass(status) {
 const INQUIRY_STATUSES = new Set(['Inquiry Pending'])
 
 function AdminProjectInquiries() {
-  const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
   const [errorMsg, setErrorMsg] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('All')
@@ -39,13 +38,26 @@ function AdminProjectInquiries() {
   const [actionPending, setActionPending] = useState(null)
   const [sortOrder, setSortOrder] = useState('desc')
 
+  const { user, userRole, loading: identityLoading } = useAdminIdentity()
+  const canLoadInquiries =
+    Boolean(user) && ['Admin', 'Super Admin', 'Associate'].includes(userRole)
+  const collectionName = identityLoading || !canLoadInquiries
+    ? null
+    : 'selectProjectSubmissions'
   const { items, loading, error: liveError } = useFirestoreCollection(
-    'selectProjectSubmissions',
-    adaptProjectForAdmin
+    collectionName,
+    adaptProjectForAdmin,
+    userRole === 'Associate'
+      ? { whereField: 'submittedBy.uid', whereValue: user?.uid }
+      : {}
   )
+  const dataLoading = identityLoading || loading
   const inquiries = useMemo(
-    () => items.filter((row) => INQUIRY_STATUSES.has(row.status)),
-    [items]
+    () => items.filter((row) =>
+      (userRole !== 'Associate' || row.submittedByUid === user?.uid) &&
+      INQUIRY_STATUSES.has(row.status)
+    ),
+    [items, userRole, user?.uid]
   )
 
   const parseDate = (dateStr) => {
@@ -80,10 +92,6 @@ function AdminProjectInquiries() {
   }, [inquiries, searchTerm, sourceFilter, statusFilter, sortOrder])
   const inquiriesPagination = useAdminPagination(filteredInquiries)
 
-  if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace />
-  }
-
   const acceptInquiry = async (inquiryId) => {
     setActionPending(inquiryId)
     setErrorMsg('')
@@ -110,7 +118,7 @@ function AdminProjectInquiries() {
             {errorMsg || liveError?.message || 'Could not load inquiries.'}
           </div>
         )}
-        {loading && (
+        {dataLoading && (
           <div className="admin-loader-container">
             <div className="admin-loader"></div>
             <span>Loading project inquiries...</span>
@@ -228,7 +236,7 @@ function AdminProjectInquiries() {
             </tbody>
           </table>
 
-          {!loading && filteredInquiries.length === 0 && (
+          {!dataLoading && filteredInquiries.length === 0 && (
             <div className="admin-users-empty">
               <i className="fa-regular fa-folder-open" aria-hidden="true"></i>
               <strong>No project inquiries found</strong>

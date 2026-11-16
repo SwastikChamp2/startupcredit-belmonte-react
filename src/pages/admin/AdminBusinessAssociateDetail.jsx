@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Navigate, useNavigate, useParams, useLocation } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import DocumentPreviewModal from '../../components/DocumentPreviewModal'
 import {
@@ -12,6 +12,7 @@ import {
   documentDownloadUrl,
   documentIconClass,
 } from '../../services/adminDataApi'
+import { useAdminIdentity } from '../../hooks/useAdminIdentity'
 import './admin.css'
 
 const DETAIL_TABS = ['Overview', 'Documents', 'Activity Log']
@@ -69,11 +70,11 @@ const PATCHABLE_FIELDS = [
 ]
 
 function AdminBusinessAssociateDetail() {
-  const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
   const { associateId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
   const backPath = location.state?.from || '/admin/business-associates'
+  const { userRole, loading: identityLoading } = useAdminIdentity()
 
   const [associate, setAssociate] = useState(null)
   const [draftAssociate, setDraftAssociate] = useState(null)
@@ -125,7 +126,21 @@ function AdminBusinessAssociateDetail() {
       }
 
       if (uid) {
-        await setAdminUserRole(uid, 'Associate')
+        const userRec = targetAssociate.email
+          ? await findUserByEmail(targetAssociate.email)
+          : null
+        const currentRole = userRec?.userRole || userRec?.role || 'User'
+        if (currentRole === 'User') {
+          await setAdminUserRole(uid, 'Associate')
+        } else if (currentRole !== 'Associate') {
+          if (!silent) {
+            setSyncResult({
+              success: false,
+              message: `The account already has the ${currentRole} role; it was not changed.`,
+            })
+          }
+          return false
+        }
         if (!silent) {
           setSyncResult({ success: true, message: 'User role synced successfully!' })
         }
@@ -162,11 +177,7 @@ function AdminBusinessAssociateDetail() {
     syncUserRole(associate, { silent: true })
   }, [associate, syncUserRole])
 
-  if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace />
-  }
-
-  if (loading) {
+  if (loading || identityLoading) {
     return (
       <AdminShell title="Business Associate" subtitle="Loading…">
         <section className="admin-users-card admin-not-found-card">
@@ -183,16 +194,26 @@ function AdminBusinessAssociateDetail() {
   if (!associate) {
     return (
       <AdminShell
-        title="Business Associate Not Found"
-        subtitle="The requested business associate application could not be found."
+        title={userRole === 'Associate' ? 'Profile Not Available' : 'Business Associate Not Found'}
+        subtitle={userRole === 'Associate'
+          ? 'This business associate profile is not available for your account.'
+          : 'The requested business associate application could not be found.'}
       >
         <section className="admin-users-card admin-not-found-card">
           <div className="admin-users-empty">
             <i className="fa-regular fa-address-card" aria-hidden="true"></i>
-            <strong>{errorMsg || 'Business associate not found'}</strong>
-            <span>Open Business Associate Inquiries and choose a valid application.</span>
-            <button className="admin-link-button" onClick={() => navigate('/admin/business-associates')} type="button">
-              Back to Associates
+            <strong>{userRole === 'Associate' ? 'Profile not available' : errorMsg || 'Business associate not found'}</strong>
+            <span>{userRole === 'Associate'
+              ? 'You can only view your own business associate profile.'
+              : 'Open Business Associate Inquiries and choose a valid application.'}</span>
+            <button
+              className="admin-link-button"
+              onClick={() => navigate(userRole === 'Associate'
+                ? '/admin/business-associate-management'
+                : '/admin/business-associates')}
+              type="button"
+            >
+              Back
             </button>
           </div>
         </section>
@@ -201,6 +222,57 @@ function AdminBusinessAssociateDetail() {
   }
 
   const fullName = getAssociateFullName(associate)
+
+  if (userRole === 'Associate') {
+    return (
+      <AdminShell title={fullName} subtitle="Your Business Associate Profile">
+        <div className="admin-detail-page-actions">
+          <button
+            className="admin-link-button secondary"
+            onClick={() => navigate('/admin/business-associate-management')}
+            type="button"
+          >
+            <i className="fa-solid fa-arrow-left" aria-hidden="true"></i>
+            Back
+          </button>
+          <span className={`admin-investor-status ${getStatusClass(associate.status)}`}>
+            {associate.status}
+          </span>
+        </div>
+        <section className="admin-users-card admin-investor-detail-card">
+          <div className="admin-detail-grid project-info-grid">
+            <div><span>First Name</span><strong>{associate.firstName || '—'}</strong></div>
+            <div><span>Middle Name</span><strong>{associate.middleName || '—'}</strong></div>
+            <div><span>Last Name</span><strong>{associate.lastName || '—'}</strong></div>
+            <div><span>Email Address</span><strong>{associate.email || '—'}</strong></div>
+            <div><span>Mobile Number</span><strong>{associate.mobile || '—'}</strong></div>
+            <div><span>Profession</span><strong>{associate.profession || '—'}</strong></div>
+            <div><span>Date of Birth</span><strong>{associate.dob || '—'}</strong></div>
+            <div><span>Education</span><strong>{associate.educationalStatus || '—'}</strong></div>
+            <div><span>Aadhaar Number</span><strong>{associate.aadhaarNumber || '—'}</strong></div>
+            <div><span>PAN Number</span><strong>{associate.panNumber || '—'}</strong></div>
+            <div><span>Bank Account</span><strong>{associate.bankAccount || '—'}</strong></div>
+            <div><span>IFSC Code</span><strong>{associate.ifscCode || '—'}</strong></div>
+            <div><span>UPI ID</span><strong>{associate.upiId || '—'}</strong></div>
+          </div>
+          {associate.documents?.some((document) => document.file?.url) && (
+            <div className="admin-detail-block">
+              <strong>Documents</strong>
+              <ul>
+                {associate.documents.filter((document) => document.file?.url).map((document) => (
+                  <li key={document.id}>
+                    <a href={documentDownloadUrl(document.file)} target="_blank" rel="noreferrer">
+                      {document.fieldName}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </section>
+      </AdminShell>
+    )
+  }
 
   // Optimistically apply the change locally, then PATCH the API with diffed fields.
   const syncAssociate = (updater) => {

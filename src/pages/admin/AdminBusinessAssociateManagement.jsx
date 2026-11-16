@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import AdminPagination from './AdminPagination'
 import useAdminPagination from './useAdminPagination'
@@ -10,6 +10,7 @@ import {
   getAssociateFullName,
 } from '../../services/adminDataApi'
 import { useFirestoreCollection } from '../../hooks/useFirestoreSnapshot'
+import { useAdminIdentity } from '../../hooks/useAdminIdentity'
 import './admin.css'
 
 function getStatusClass(status) {
@@ -20,30 +21,49 @@ const isCompleted = (status) => status === 'Project Completed'
 const isInquiryStage = (status) => status === 'Inquiry Pending'
 
 function AdminBusinessAssociateManagement() {
-  const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
   const navigate = useNavigate()
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState('All Status')
   const [sectorFilter, setSectorFilter] = useState('All Sectors')
   const [expandedAssociateId, setExpandedAssociateId] = useState('')
 
+  const { user, userRole, loading: identityLoading, error: identityError } = useAdminIdentity()
+  const canLoadAdminData =
+    !identityLoading &&
+    Boolean(user) &&
+    ['Admin', 'Super Admin', 'Associate'].includes(userRole)
   const {
     items: allAssociates,
     loading: loadingAssociates,
     error: associatesError,
-  } = useFirestoreCollection('businessAssociateApplications', adaptBusinessAssociateForAdmin)
+  } = useFirestoreCollection(
+    canLoadAdminData ? 'businessAssociateApplications' : null,
+    adaptBusinessAssociateForAdmin,
+    userRole === 'Associate'
+      ? { whereField: 'submittedBy.uid', whereValue: user?.uid }
+      : {}
+  )
   const {
     items: allProjects,
     loading: loadingProjects,
     error: projectsError,
-  } = useFirestoreCollection('selectProjectSubmissions', adaptProjectForAdmin)
+  } = useFirestoreCollection(
+    canLoadAdminData ? 'selectProjectSubmissions' : null,
+    adaptProjectForAdmin,
+    userRole === 'Associate'
+      ? { whereField: 'submittedBy.uid', whereValue: user?.uid }
+      : {}
+  )
 
   const verifiedAssociates = useMemo(
-    () => allAssociates.filter((a) => a.status === 'Verified'),
-    [allAssociates]
+    () => allAssociates.filter((a) =>
+      (userRole !== 'Associate' || a.submittedByUid === user?.uid) &&
+      a.status === 'Verified'
+    ),
+    [allAssociates, userRole, user?.uid]
   )
-  const loading = loadingAssociates || loadingProjects
-  const errorMsg = associatesError?.message || projectsError?.message || ''
+  const loading = identityLoading || loadingAssociates || loadingProjects
+  const errorMsg = identityError?.message || associatesError?.message || projectsError?.message || ''
 
   // Index projects by submitter email (lowercased) for fast lookup.
   const projectsByEmail = useMemo(() => {
@@ -136,10 +156,6 @@ function AdminBusinessAssociateManagement() {
   const projectsInProgress = associatedProjects.filter(
     ({ project }) => !isCompleted(project.status) && !isInquiryStage(project.status)
   ).length
-
-  if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace />
-  }
 
   return (
     <AdminShell

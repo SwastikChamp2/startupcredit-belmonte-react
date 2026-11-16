@@ -1,59 +1,154 @@
-import { useEffect, useState } from 'react'
-import { NavLink, useNavigate } from 'react-router-dom'
-import { onAuthStateChanged, signOut } from 'firebase/auth'
-import { adminAuth } from '../../firebase'
+import { useState } from 'react'
+import { Navigate, NavLink, useLocation, useNavigate } from 'react-router-dom'
+import { signOut } from 'firebase/auth'
+import { auth, firebaseProjectId } from '../../firebase'
+import { useAdminIdentity } from '../../hooks/useAdminIdentity'
+import { useAuthModal } from '../../hooks/useAuthModal'
 import './admin.css'
+
+const ADMIN_ROLES = new Set(['Admin', 'Super Admin'])
+
+const NAV_ITEMS = [
+  { to: '/admin/users', label: 'Users', icon: 'fa-users' },
+  { to: '/admin/project-inquiries', label: 'Project Inquiries', icon: 'fa-folder-open' },
+  { to: '/admin/projects', label: 'Project Management', icon: 'fa-briefcase' },
+  { to: '/admin/investors', label: 'Investor Management', icon: 'fa-user-tie' },
+  { to: '/admin/business-associates', label: 'Business Associate Inquiries', icon: 'fa-id-card-clip' },
+  { to: '/admin/business-associate-management', label: 'Business Associate Management', icon: 'fa-handshake' },
+  { to: '/admin/contact-us', label: 'Contact Us Management', icon: 'fa-envelope' },
+  { to: '/admin/truck-inquiries', label: 'Truck Inquiry', icon: 'fa-truck' },
+  { to: '/admin/services', label: 'Service Management', icon: 'fa-server' },
+  { to: '/admin/government-schemes', label: 'Government Scheme Management', icon: 'fa-building-columns' },
+]
 
 function AdminShell({ children, title, subtitle }) {
   const navigate = useNavigate()
+  const location = useLocation()
+  const { openAuthModal } = useAuthModal()
+  const { user, userRole, profileExists, disabled, loading, error } = useAdminIdentity()
   const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-  // 'checking' | 'ok' | 'no-user' | 'no-claim'
-  const [adminAuthState, setAdminAuthState] = useState('checking')
-  const [signedInAs, setSignedInAs] = useState('')
-
-  // Watch the Firebase Auth state. If the current user changes (e.g. someone
-  // signed in via the public Login modal in another tab) or doesn't have the
-  // admin custom claim, we surface that explicitly instead of letting the
-  // Firestore listeners explode with cryptic permission errors.
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(adminAuth, async (firebaseUser) => {
-      if (!firebaseUser) {
-        setAdminAuthState('no-user')
-        setSignedInAs('')
-        return
-      }
-      try {
-        // Force-refresh so we get the latest custom claims.
-        const tokenResult = await firebaseUser.getIdTokenResult(true)
-        setSignedInAs(firebaseUser.email || firebaseUser.uid)
-        if (tokenResult.claims?.admin === true) {
-          setAdminAuthState('ok')
-        } else {
-          setAdminAuthState('no-claim')
-        }
-      } catch (err) {
-        console.warn('AdminShell: token check failed', err)
-        setAdminAuthState('no-claim')
-      }
-    })
-    return () => unsubscribe()
-  }, [])
+  const isFullAdmin = ADMIN_ROLES.has(userRole)
+  const isAssociatePage =
+    location.pathname === '/admin/project-inquiries' ||
+    location.pathname === '/admin/projects' ||
+    location.pathname.startsWith('/admin/projects/') ||
+    location.pathname === '/admin/business-associate-management' ||
+    /^\/admin\/business-associates\/[^/]+$/.test(location.pathname)
 
   const handleLogout = async () => {
-    localStorage.removeItem('startupCreditAdminAuth')
-    // Drop the admin Firebase session so listeners stop trying to read.
-    // Public auth (different app instance) is untouched.
-    await signOut(adminAuth).catch(() => {})
-    navigate('/admin/login', { replace: true })
+    await signOut(auth)
+    navigate('/admin', { replace: true })
+  }
+
+  if (!loading && userRole === 'Associate' && !isAssociatePage) {
+    return <Navigate to="/admin/projects" replace />
+  }
+
+  const hasAccess = Boolean(user && !disabled && (isFullAdmin || userRole === 'Associate'))
+  const initials = (user?.name || user?.displayName || user?.email || 'U')
+    .split(/[\s@]+/)
+    .map((part) => part[0])
+    .filter(Boolean)
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+
+  if (!loading && (error || !user || disabled || !hasAccess)) {
+    return (
+      <main className="admin-access-page">
+        <section aria-labelledby="admin-access-title" className="admin-access-card" role="alert">
+          <div className="admin-access-icon" aria-hidden="true">
+            <i className={`fa-solid ${error ? 'fa-triangle-exclamation' : 'fa-lock'}`}></i>
+          </div>
+          <span className="admin-access-eyebrow">Startup Credit Admin</span>
+          <h1 id="admin-access-title">
+            {error
+              ? 'We could not verify your access'
+              : !user
+                ? 'Sign in required'
+                : disabled
+                  ? 'This account is disabled'
+                  : 'Admin access required'}
+          </h1>
+          <p className="admin-access-description">
+            {error
+              ? 'Your user profile could not be read. Check the Firestore rules deployment and try again.'
+              : !user
+                ? 'Sign in with your regular account to continue.'
+                : disabled
+                  ? 'This account has been disabled. Contact support if you believe this is a mistake.'
+                  : 'This account does not currently have an admin role.'}
+          </p>
+
+          {user && !error && !disabled && (
+            <div className="admin-access-diagnostics">
+              <div>
+                <span>Signed in as</span>
+                <strong>{user.email || 'Unknown email'}</strong>
+              </div>
+              <div>
+                <span>Current role</span>
+                <strong>{userRole}</strong>
+              </div>
+              {/* <div>
+                <span>Firebase project</span>
+                <strong>{firebaseProjectId || 'Not configured'}</strong>
+              </div>
+              <div>
+                <span>Profile document</span>
+                <code>users/{user.uid}</code>
+              </div> */}
+              {!profileExists && (
+                <p className="admin-access-profile-missing">
+                  No profile document was found at this UID. The admin panel does not look up
+                  profiles by email address.
+                </p>
+              )}
+            </div>
+          )}
+
+          {!error && user && !disabled && !hasAccess && (
+            <p className="admin-access-help">
+              In this Firebase project, verify that the document ID is the UID shown above and
+              that its <code>userRole</code> field is exactly <code>Admin</code>,{' '}
+              <code>Super Admin</code>, or <code>Associate</code>. This page updates when that
+              profile changes.
+            </p>
+          )}
+
+          <div className="admin-access-actions">
+            {!user ? (
+              <button
+                className="admin-link-button"
+                type="button"
+                onClick={() => openAuthModal('login')}
+              >
+                Go to sign in
+              </button>
+            ) : (
+              <button className="admin-link-button" type="button" onClick={handleLogout}>
+                Sign out
+              </button>
+            )}
+            <button className="admin-link-button" type="button" onClick={() => navigate('/')}>
+              Back to Home
+            </button>
+          </div>
+
+
+
+        </section>
+      </main>
+    )
   }
 
   return (
     <main className="admin-shell" style={!isSidebarOpen ? { display: 'block' } : {}}>
-      {isSidebarOpen && (
-        <aside className={`admin-sidebar ${isSidebarOpen ? 'open' : ''}`}>
+      {hasAccess && isSidebarOpen && (
+        <aside className="admin-sidebar open">
           <div className="admin-sidebar-logo">
             <img src="/assets/img/logo/logo-1.png" alt="Startup Credit" />
-            <button 
+            <button
               aria-label="Close sidebar"
               className="admin-sidebar-close"
               onClick={() => setIsSidebarOpen(false)}
@@ -63,83 +158,59 @@ function AdminShell({ children, title, subtitle }) {
             </button>
           </div>
 
-        <nav className="admin-nav" aria-label="Admin navigation">
-          <NavLink className="admin-nav-link" to="/admin/users">
-            <i className="fa-solid fa-users" aria-hidden="true"></i>
-            Users
-          </NavLink>
-          <NavLink className="admin-nav-link" to="/admin/project-inquiries">
-            <i className="fa-solid fa-folder-open" aria-hidden="true"></i>
-            Project Inquiries
-          </NavLink>
-          <NavLink className="admin-nav-link" to="/admin/projects">
-            <i className="fa-solid fa-briefcase" aria-hidden="true"></i>
-            Project Management
-          </NavLink>
-          <NavLink className="admin-nav-link" to="/admin/investors">
-            <i className="fa-solid fa-user-tie" aria-hidden="true"></i>
-            Investor Management
-          </NavLink>
-          <NavLink className="admin-nav-link" to="/admin/business-associates">
-            <i className="fa-solid fa-id-card-clip" aria-hidden="true"></i>
-            Business Associate Inquiries
-          </NavLink>
-          <NavLink className="admin-nav-link" to="/admin/business-associate-management">
-            <i className="fa-solid fa-handshake" aria-hidden="true"></i>
-            Business Associate Management
-          </NavLink>
-          <NavLink className="admin-nav-link" to="/admin/contact-us">
-            <i className="fa-regular fa-envelope" aria-hidden="true"></i>
-            Contact Us Management
-          </NavLink>
-          <NavLink className="admin-nav-link" to="/admin/truck-inquiries">
-            <i className="fa-solid fa-truck" aria-hidden="true"></i>
-            Truck Inquiry
-          </NavLink>
-          <NavLink className="admin-nav-link" to="/admin/services">
-            <i className="fa-solid fa-server" aria-hidden="true"></i>
-            Service Management
-          </NavLink>
-          <NavLink className="admin-nav-link" to="/admin/government-schemes">
-            <i className="fa-solid fa-building-columns" aria-hidden="true"></i>
-            Government Scheme Management
-          </NavLink>
-        </nav>
-
-          <div className="admin-help-card">
-            <i className="fa-solid fa-chart-line" aria-hidden="true"></i>
-            <strong>Drive Growth</strong>
-            <span>Manage business projects and facilitate funding efficiently.</span>
-          </div>
+          <nav className="admin-nav" aria-label="Admin navigation">
+            {NAV_ITEMS
+              .filter((item) => isFullAdmin || [
+                '/admin/project-inquiries',
+                '/admin/projects',
+                '/admin/business-associate-management',
+              ].includes(item.to))
+              .map((item) => (
+                <NavLink className="admin-nav-link" key={item.to} to={item.to}>
+                  <i className={`fa-solid ${item.icon}`} aria-hidden="true"></i>
+                  {item.label}
+                </NavLink>
+              ))}
+          </nav>
         </aside>
       )}
 
       <section className="admin-main">
         <header className="admin-topbar">
-          {!isSidebarOpen ? (
-            <button className="admin-icon-button" type="button" aria-label="Open menu" onClick={() => setIsSidebarOpen(true)}>
+          {hasAccess && !isSidebarOpen ? (
+            <button
+              className="admin-icon-button"
+              type="button"
+              aria-label="Open menu"
+              onClick={() => setIsSidebarOpen(true)}
+            >
               <i className="fa-solid fa-bars" aria-hidden="true"></i>
             </button>
-          ) : (
-            <div style={{ width: '42px' }}></div>
-          )}
+          ) : <div style={{ width: '42px' }}></div>}
 
           <div className="admin-global-search">
             <i className="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
             <input type="search" placeholder="Search anything..." aria-label="Search anything" />
           </div>
 
-          <div className="admin-profile">
-            <span className="admin-avatar">A</span>
-            <div>
-              <strong>Admin User</strong>
-              <span>Super Admin</span>
+          {hasAccess && (
+            <div className="admin-profile">
+              <span className="admin-avatar">{initials}</span>
+              <div>
+                <strong>{user.name || user.displayName || user.email}</strong>
+                <span>{userRole}</span>
+              </div>
+              <button
+                className="admin-logout-button"
+                type="button"
+                onClick={handleLogout}
+                style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                <i className="fa-solid fa-right-from-bracket"></i>
+                Logout
+              </button>
             </div>
-            <button className="admin-logout-button" type="button" onClick={handleLogout} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <i className="fa-solid fa-right-from-bracket"></i>
-              Logout
-            </button>
-          </div>
+          )}
         </header>
 
         <div className="admin-content">
@@ -150,46 +221,31 @@ function AdminShell({ children, title, subtitle }) {
             </div>
           </div>
 
-          {adminAuthState === 'checking' ? (
+          {loading ? (
             <div className="admin-loader-container">
               <div className="admin-loader"></div>
               <span>Verifying admin access...</span>
             </div>
-          ) : adminAuthState !== 'ok' ? (
-            <div style={{
-              margin: '12px 0',
-              padding: '16px 18px',
-              background: '#fef2f2',
-              color: '#991b1b',
-              borderRadius: 8,
-              fontSize: 14,
-              lineHeight: 1.5,
-            }}>
-              <strong>Admin access not active.</strong>{' '}
-              {adminAuthState === 'no-user' ? (
-                <>You aren&apos;t signed in to Firebase. Sign back in to /admin/login.</>
-              ) : (
-                <>
-                  You&apos;re signed in as <code>{signedInAs}</code>, but this account doesn&apos;t
-                  have the <code>admin</code> custom claim. Either you signed in via the
-                  public Login modal (which replaced the admin session), or the admin
-                  claim hasn&apos;t been granted yet.
-                </>
-              )}
-              <div style={{ marginTop: 12 }}>
-                <button
-                  className="admin-link-button"
-                  type="button"
-                  onClick={handleLogout}
-                  style={{ marginRight: 8 }}
-                >
-                  Sign out and re-login as admin
-                </button>
-              </div>
+          ) : error ? (
+            <div role="alert" className="admin-access-error">
+              Could not verify your user profile. Please try again or contact an administrator.
             </div>
-          ) : (
-            children
-          )}
+          ) : !user ? (
+            <div className="admin-access-error">
+              <strong>Sign in required.</strong> Sign in with your regular account to continue.
+              <button className="admin-link-button" type="button" onClick={() => openAuthModal('login')}>
+                Sign in
+              </button>
+            </div>
+          ) : !hasAccess ? (
+            <div className="admin-access-error">
+              <strong>{disabled ? 'This account has been disabled.' : 'Admin access not active.'}</strong>{' '}
+              {!disabled && <>This account has the &quot;{userRole}&quot; role. Contact a Super Admin if you need access.</>}
+              <button className="admin-link-button" type="button" onClick={handleLogout}>
+                Sign out
+              </button>
+            </div>
+          ) : children}
         </div>
       </section>
     </main>

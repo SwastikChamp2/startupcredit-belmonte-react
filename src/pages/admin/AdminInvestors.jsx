@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import AdminPagination from './AdminPagination'
 import AdminStatusDropdown from './AdminStatusDropdown'
@@ -25,7 +25,6 @@ function getTabCount(tab, investors) {
 }
 
 function AdminInvestors() {
-  const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
   const navigate = useNavigate()
   const [errorMsg, setErrorMsg] = useState('')
   const [activeTab, setActiveTab] = useState('All Investors')
@@ -79,10 +78,6 @@ function AdminInvestors() {
     })
   }, [activeTab, searchTerm, statusFilter, investors, sortOrder])
   const investorsPagination = useAdminPagination(filteredInvestors)
-
-  if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace />
-  }
 
   return (
     <AdminShell

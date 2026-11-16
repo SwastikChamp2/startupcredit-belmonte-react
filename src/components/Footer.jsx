@@ -1,3 +1,4 @@
+
 import { Link, useLocation } from 'react-router-dom'
 
 function Footer() {
@@ -48,6 +49,7 @@ function Footer() {
                   <li><Link to="/service">Our Services</Link></li>
                   <li><Link to="/terms-conditions">T&amp;C Policy</Link></li>
                   <li><Link to="/privacy-policy">Privacy Policy</Link></li>
+                  <li><Link to="/admin">Admin</Link></li>
                 </ul>
               </div>
             </div>
@@ -63,6 +65,7 @@ function Footer() {
                 <ul className="copy-list">
                   <li><Link to="/terms-conditions">T&amp;C Policy</Link></li>
                   <li><Link to="/privacy-policy">Privacy Policy</Link></li>
+                  <li><Link to="/admin">Admin</Link></li>
                 </ul>
               </div>
             </div>
@@ -123,6 +126,7 @@ function Footer() {
                 <li><Link to="/service">Our Services</Link></li>
                 <li><Link to="/terms-conditions">T&amp;C Policy</Link></li>
                 <li><Link to="/privacy-policy">Privacy Policy</Link></li>
+                <li><Link to="/admin">Admin</Link></li>
                 <li><Link to="/contact">Contact Us</Link></li>
               </ul>
             </div>
@@ -139,6 +143,7 @@ function Footer() {
               <ul className="copy-list">
                 <li><Link to="/terms-conditions">T&amp;C Policy</Link></li>
                 <li><Link to="/privacy-policy">Privacy Policy</Link></li>
+                <li><Link to="/admin">Admin</Link></li>
               </ul>
             </div>
           </div>

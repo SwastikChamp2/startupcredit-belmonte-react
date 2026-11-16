@@ -1,9 +1,6 @@
 import { useEffect, useState } from 'react'
-import { collection, doc, onSnapshot, query, orderBy } from 'firebase/firestore'
-// Admin pages listen through the dedicated admin Firestore instance so the
-// listeners use the admin's auth context (and `admin: true` claim) — fully
-// isolated from any public-site sign-in/sign-out.
-import { adminDb as db } from '../firebase'
+import { collection, doc, onSnapshot, query, orderBy, where } from 'firebase/firestore'
+import { db } from '../firebase'
 
 /**
  * Subscribe to a Firestore collection in real time. Whenever a doc is
@@ -17,7 +14,7 @@ import { adminDb as db } from '../firebase'
  * @param {{ orderByField?: string, orderDirection?: 'asc'|'desc' }} options
  */
 export function useFirestoreCollection(collectionName, adapter = null, options = {}) {
-  const { orderByField, orderDirection = 'desc' } = options
+  const { orderByField, orderDirection = 'desc', whereField, whereValue } = options
   const [items, setItems] = useState([])
   // Initialize loading from props directly so we never need to call setState
   // synchronously inside the effect.
@@ -28,6 +25,7 @@ export function useFirestoreCollection(collectionName, adapter = null, options =
     if (!collectionName) return undefined
 
     let q = collection(db, collectionName)
+    if (whereField) q = query(q, where(whereField, '==', whereValue))
     if (orderByField) q = query(q, orderBy(orderByField, orderDirection))
 
     const unsubscribe = onSnapshot(
@@ -49,7 +47,7 @@ export function useFirestoreCollection(collectionName, adapter = null, options =
     )
 
     return () => unsubscribe()
-  }, [collectionName, adapter, orderByField, orderDirection])
+  }, [collectionName, adapter, orderByField, orderDirection, whereField, whereValue])
 
   return { items, loading, error }
 }

@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { adminDb as db } from '../../firebase';
+import { db } from '../../firebase';
 import { collection, doc, setDoc, serverTimestamp } from 'firebase/firestore';
 import { uploadAdminFile } from '../../services/adminDataApi';
+import AdminShell from './AdminShell';
 
 const schemesData = {
   "national-agricultural-infra-financing": {
@@ -1139,7 +1140,6 @@ const AdminMigration = () => {
   const [status, setStatus] = useState('idle');
   const [logs, setLogs] = useState([]);
   const [progress, setProgress] = useState(0);
-  const [secretKey, setSecretKey] = useState('');
 
   const addLog = (msg) => setLogs((prev) => [...prev, `${new Date().toLocaleTimeString()}: ${msg}`]);
 
@@ -1172,10 +1172,6 @@ const AdminMigration = () => {
   };
 
   const runMigration = async () => {
-    if (secretKey !== 'startupcredit2026') {
-      alert('Invalid Secret Key. Please enter the correct key to proceed.');
-      return;
-    }
     if (!window.confirm('This will migrate all service data to Firestore. Existing docs with same IDs will be updated. Continue?')) return;
     
     setStatus('running');
@@ -1253,6 +1249,7 @@ const AdminMigration = () => {
   };
 
   return (
+    <AdminShell title="Data Migration Utility" subtitle="Migrate legacy static service data to Firestore.">
     <div style={{ padding: '40px', maxWidth: '900px', margin: '0 auto', fontFamily: 'sans-serif' }}>
       <h1>Data Migration Utility</h1>
       <p>This tool will migrate legacy static service data to Firestore and upload local images to Cloudinary.</p>
@@ -1269,17 +1266,6 @@ const AdminMigration = () => {
             <div style={{ width: `${progress}%`, height: '100%', backgroundColor: '#007bff', transition: 'width 0.3s' }}></div>
           </div>
         )}
-      </div>
-
-      <div style={{ marginBottom: '20px' }}>
-        <label style={{ display: 'block', marginBottom: '5px' }}>Admin Access Key:</label>
-        <input 
-          type="password" 
-          value={secretKey} 
-          onChange={(e) => setSecretKey(e.target.value)} 
-          placeholder="Enter Secret Key"
-          style={{ padding: '10px', width: '200px', borderRadius: '5px', border: '1px solid #ccc' }}
-        />
       </div>
 
       <button 
@@ -1314,6 +1300,7 @@ const AdminMigration = () => {
         </div>
       </div>
     </div>
+    </AdminShell>
   );
 };
 

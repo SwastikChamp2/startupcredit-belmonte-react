@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import {
   fetchAdminSchemes,
@@ -12,7 +12,6 @@ import {
 import './admin.css'
 
 function AdminGovernmentSchemeManagement() {
-  const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('All Schemes')
   const [searchTerm, setSearchTerm] = useState('')
@@ -113,10 +112,6 @@ function AdminGovernmentSchemeManagement() {
       return dateB - dateA
     })
   }, [schemes, searchTerm, categoryFilter, statusFilter])
-
-  if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace />
-  }
 
   const handleAddCategory = async (e) => {
     e.preventDefault()

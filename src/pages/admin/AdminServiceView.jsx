@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import { fetchAdminService } from '../../services/adminDataApi'
 import './admin.css'
@@ -7,7 +7,6 @@ import './admin.css'
 function AdminServiceView() {
   const { serviceId } = useParams()
   const navigate = useNavigate()
-  const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
 
   const [service, setService] = useState(null)
   const [error, setError] = useState('')
@@ -25,10 +24,6 @@ function AdminServiceView() {
       cancelled = true
     }
   }, [serviceId])
-
-  if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace />
-  }
 
   if (!service) {
     return (

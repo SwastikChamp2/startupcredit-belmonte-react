@@ -178,7 +178,7 @@ function BusinessAssociate() {
     }
   }, [user])
 
-  const existingStatus = user?.role === 'Associate' ? 'Verified' : existingApplication?.status || ''
+  const existingStatus = user?.userRole === 'Associate' ? 'Verified' : existingApplication?.status || ''
   const hasActiveApplication =
     existingStatus === 'Inquiry Submitted' ||
     existingStatus === 'Verification In progress' ||

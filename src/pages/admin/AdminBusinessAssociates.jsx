@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import AdminPagination from './AdminPagination'
 import AdminStatusDropdown from './AdminStatusDropdown'
@@ -18,7 +18,6 @@ const ASSOCIATE_TABS = ['All Inquiries', 'Verified Associates']
 const ASSOCIATE_STATUSES = ['Inquiry Submitted', 'Verification In progress', 'Verified']
 
 function AdminBusinessAssociates() {
-  const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('All Inquiries')
   const [searchTerm, setSearchTerm] = useState('')
@@ -49,7 +48,11 @@ function AdminBusinessAssociates() {
           uid = userRec?.id || ''
         }
         if (uid) {
-          await setAdminUserRole(uid, 'Associate')
+          const userRec = await findUserByEmail(associate.email)
+          const userRole = userRec?.userRole || userRec?.role || 'User'
+          if (userRole === 'User') {
+            await setAdminUserRole(uid, 'Associate')
+          }
         }
       }
       // Live snapshot listener picks up the change.
@@ -87,10 +90,6 @@ function AdminBusinessAssociates() {
     })
   }, [activeTab, associates, searchTerm, statusFilter, sortOrder])
   const associatesPagination = useAdminPagination(filteredAssociates)
-
-  if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace />
-  }
 
   return (
     <AdminShell

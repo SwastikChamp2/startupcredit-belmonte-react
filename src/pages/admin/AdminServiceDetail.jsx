@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import {
   fetchAdminService,
@@ -15,7 +15,6 @@ import './admin.css'
 function AdminServiceDetail() {
   const { serviceId } = useParams()
   const navigate = useNavigate()
-  const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
   const isEdit = serviceId !== 'new'
 
   const [activeTab, setActiveTab] = useState('Overview')
@@ -87,10 +86,6 @@ function AdminServiceDetail() {
       cancelled = true
     }
   }, [serviceId, isEdit])
-
-  if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace />
-  }
 
   const handleInputChange = (e) => {
     const { name, value } = e.target

@@ -1,0 +1,183 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function currentUserProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function currentUserRole() {
+      let profile = currentUserProfile();
+      return profile.get('userRole', profile.get('role', 'User'));
+    }
+
+    function isAdmin() {
+      return isAuthenticated()
+        && currentUserRole() == 'Admin'
+        && currentUserProfile().get('disabled', false) != true;
+    }
+
+    function isSuperAdmin() {
+      return isAuthenticated()
+        && currentUserRole() == 'Super Admin'
+        && currentUserProfile().get('disabled', false) != true;
+    }
+
+    function isAssociate() {
+      return isAuthenticated()
+        && currentUserRole() == 'Associate'
+        && currentUserProfile().get('disabled', false) != true;
+    }
+
+    function hasFullAccess() {
+      return isAdmin() || isSuperAdmin();
+    }
+
+    function submittedByCurrentUser() {
+      return resource.data.get('submittedBy', {}) is map
+        && resource.data.get('submittedBy', {}).get('uid', '') == request.auth.uid;
+    }
+
+    function newSubmissionBelongsToCurrentUser() {
+      return request.resource.data.get('submittedBy', {}) is map
+        && request.resource.data.get('submittedBy', {}).get('uid', '') == request.auth.uid;
+    }
+
+    function canUpdateOwnProfile(userId) {
+      return isAuthenticated()
+        && request.auth.uid == userId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'uid',
+          'email',
+          'name',
+          'provider',
+          'emailVerified',
+          'countryCode',
+          'phoneNumber',
+          'updatedAt',
+          'userRole'
+        ])
+        && request.resource.data.get(
+          'userRole',
+          resource.data.get('userRole', resource.data.get('role', 'User'))
+        ) == resource.data.get('userRole', resource.data.get('role', 'User'));
+    }
+
+    function canChangeUserRole() {
+      let oldRole = resource.data.get('userRole', resource.data.get('role', 'User'));
+      let newRole = request.resource.data.get('userRole', 'User');
+      return hasFullAccess()
+        && newRole in ['User', 'Associate', 'Admin']
+        && (
+          isSuperAdmin()
+          || (isAdmin() && oldRole != 'Admin' && oldRole != 'Super Admin' && newRole != 'Admin')
+        );
+    }
+
+    function canAdminUpdateUser() {
+      return hasFullAccess()
+        && !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['userRole'])
+          || canChangeUserRole()
+        );
+    }
+
+    function canDeleteUser() {
+      let targetRole = resource.data.get('userRole', resource.data.get('role', 'User'));
+      return hasFullAccess()
+        && (isSuperAdmin() || (targetRole != 'Admin' && targetRole != 'Super Admin'));
+    }
+
+    // Public reference data
+    match /staticData/{doc} {
+      allow read: if true;
+      allow write: if hasFullAccess();
+    }
+
+    match /services/{doc} {
+      allow read: if true;
+      allow write: if hasFullAccess();
+    }
+
+    match /serviceSections/{doc} {
+      allow read: if true;
+      allow write: if hasFullAccess();
+    }
+
+    match /governmentSchemes/{doc} {
+      allow read: if true;
+      allow write: if hasFullAccess();
+    }
+
+    match /governmentSchemeCategories/{doc} {
+      allow read: if true;
+      allow write: if hasFullAccess();
+    }
+
+    match /schemeDetails/{doc} {
+      allow read: if true;
+      allow write: if hasFullAccess();
+    }
+
+    match /nicSections/{doc} {
+      allow read: if true;
+      allow write: if hasFullAccess();
+    }
+
+    match /users/{userId} {
+      allow read: if hasFullAccess()
+        || (isAuthenticated() && request.auth.uid == userId);
+
+      allow create: if isAuthenticated()
+        && request.auth.uid == userId
+        && request.resource.data.get('userRole', 'User') == 'User';
+
+      allow update: if canAdminUpdateUser() || canUpdateOwnProfile(userId);
+      allow delete: if canDeleteUser();
+    }
+
+    match /selectProjectSubmissions/{doc} {
+      allow read: if hasFullAccess() || (isAssociate() && submittedByCurrentUser());
+      allow create: if isAuthenticated() && newSubmissionBelongsToCurrentUser();
+      allow update: if hasFullAccess() || (isAssociate() && submittedByCurrentUser());
+      allow delete: if hasFullAccess();
+    }
+
+    match /investorApplications/{doc} {
+      allow read: if hasFullAccess();
+      allow create: if isAuthenticated();
+      allow update, delete: if hasFullAccess();
+    }
+
+    match /businessAssociateApplications/{doc} {
+      allow read: if hasFullAccess() || (isAssociate() && submittedByCurrentUser());
+      allow create: if isAuthenticated() && newSubmissionBelongsToCurrentUser();
+      allow update, delete: if hasFullAccess();
+    }
+
+    match /contactInquiries/{doc} {
+      allow read: if hasFullAccess();
+      allow create: if true;
+      allow update, delete: if hasFullAccess();
+    }
+
+    match /truckInquiries/{doc} {
+      allow read: if hasFullAccess();
+      allow create: if true;
+      allow update, delete: if hasFullAccess();
+    }
+
+    // Keep broad admin access for other collections without bypassing the
+    // ownership and role-change constraints above.
+    match /{collectionName}/{document=**} {
+      allow read, write: if hasFullAccess()
+        && collectionName != 'users'
+        && collectionName != 'selectProjectSubmissions'
+        && collectionName != 'businessAssociateApplications';
+    }
+  }
+}

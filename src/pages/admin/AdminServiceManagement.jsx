@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useCallback } from 'react'
-import { Navigate, useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import AdminPagination from './AdminPagination'
 import useAdminPagination from './useAdminPagination'
@@ -16,7 +16,6 @@ import {
 import './admin.css'
 
 function AdminServiceManagement() {
-  const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
   const navigate = useNavigate()
   const [activeTab, setActiveTab] = useState('All Services')
   const [searchTerm, setSearchTerm] = useState('')
@@ -137,10 +136,6 @@ function AdminServiceManagement() {
   const hasFilters = searchTerm.trim() !== '' || categoryFilter !== 'All Categories' || statusFilter !== 'All Status'
   const displayServices = hasFilters ? filteredServices : dragServices
   const servicesPagination = useAdminPagination(displayServices)
-
-  if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace />
-  }
 
   const handleAddCategory = async (e) => {
     e.preventDefault()

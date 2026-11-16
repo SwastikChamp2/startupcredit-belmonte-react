@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import Layout from './components/Layout'
 import Home from './pages/Home'
 import About from './pages/About'
@@ -14,7 +14,6 @@ import BecomeInvestor from './pages/BecomeInvestor'
 import Error from './pages/Error'
 import PrivacyPolicy from './pages/PrivacyPolicy'
 import TermsConditions from './pages/TermsConditions'
-import AdminLogin from './pages/admin/AdminLogin'
 import AdminRedirect from './pages/admin/AdminRedirect'
 import AdminUsers from './pages/admin/AdminUsers'
 import AdminProjectInquiries from './pages/admin/AdminProjectInquiries'
@@ -40,7 +39,7 @@ function App() {
   return (
     <Routes>
       <Route path="/admin" element={<AdminRedirect />} />
-      <Route path="/admin/login" element={<AdminLogin />} />
+      <Route path="/admin/login" element={<Navigate to="/admin" replace />} />
       <Route path="/admin/migrate" element={<AdminMigration />} />
       <Route path="/admin/users" element={<AdminUsers />} />
       <Route path="/admin/project-inquiries" element={<AdminProjectInquiries />} />
@@ -60,9 +59,9 @@ function App() {
       <Route path="/admin/government-schemes/:schemeId" element={<AdminGovernmentSchemeDetail />} />
       <Route path="/admin/government-schemes/:schemeId/view" element={<AdminGovernmentSchemeView />} />
       <Route element={<Layout />}>
-      <Route path="/" element={<Home />} />
+        <Route path="/" element={<Home />} />
         {/* Comment out the test path when in prod */}
-        {/* <Route path="/test" element={<Test />} /> */}
+        <Route path="/test" element={<Test />} />
         <Route path="/about" element={<About />} />
         <Route path="/service" element={<Service />} />
         <Route path="/service-details" element={<ServiceDetails />} />
@@ -75,7 +74,7 @@ function App() {
         <Route path="/become-investor" element={<BecomeInvestor />} />
         <Route path="/privacy-policy" element={<PrivacyPolicy />} />
         <Route path="/terms-conditions" element={<TermsConditions />} />
-        
+
         <Route path="*" element={<Error />} />
       </Route>
     </Routes>

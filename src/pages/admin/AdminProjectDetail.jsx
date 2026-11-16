@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link, Navigate, useParams, useNavigate, useLocation } from 'react-router-dom'
+import { Link, useParams, useNavigate, useLocation } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import DocumentPreviewModal from '../../components/DocumentPreviewModal'
 import { PROJECT_STATUSES } from './adminProjectData'
@@ -95,7 +95,6 @@ const PATCHABLE_FIELDS = [
 ]
 
 function AdminProjectDetail() {
-  const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
   const { projectId } = useParams()
   const navigate = useNavigate()
   const location = useLocation()
@@ -153,10 +152,6 @@ function AdminProjectDetail() {
       cancelled = true
     }
   }, [])
-
-  if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace />
-  }
 
   if (loading) {
     return (

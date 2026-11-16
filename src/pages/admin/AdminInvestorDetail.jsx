@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import DocumentPreviewModal from '../../components/DocumentPreviewModal'
 import {
@@ -63,7 +63,6 @@ function getStatusClass(status) {
 }
 
 function AdminInvestorDetail() {
-  const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
   const { investorId } = useParams()
   const navigate = useNavigate()
   const [investor, setInvestor] = useState(null)
@@ -100,10 +99,6 @@ function AdminInvestorDetail() {
   useEffect(() => {
     reload()
   }, [reload])
-
-  if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace />
-  }
 
   if (loading) {
     return (

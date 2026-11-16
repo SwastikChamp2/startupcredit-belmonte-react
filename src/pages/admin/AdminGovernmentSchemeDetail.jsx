@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import {
   fetchAdminScheme,
@@ -15,7 +15,6 @@ import './admin.css'
 function AdminGovernmentSchemeDetail() {
   const { schemeId } = useParams()
   const navigate = useNavigate()
-  const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
   const isEdit = schemeId !== 'new'
 
   const [activeTab, setActiveTab] = useState('Overview')
@@ -98,10 +97,6 @@ function AdminGovernmentSchemeDetail() {
   }, [schemeId, isEdit, categoryLookup])
 
   const categoryNames = (allCategories || []).map((c) => c.name)
-
-  if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace />
-  }
 
   const handleInputChange = (e) => {
     const { name, value } = e.target

@@ -68,7 +68,7 @@ function SelectProject() {
         return
       }
 
-      if (user?.role === 'Associate') {
+      if (user?.userRole === 'Associate') {
         if (cancelled) return
         setIsAssociate(true)
         setAssociateData({

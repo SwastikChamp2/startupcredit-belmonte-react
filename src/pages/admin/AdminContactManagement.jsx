@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { Navigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import AdminPagination from './AdminPagination'
 import useAdminPagination from './useAdminPagination'
@@ -21,7 +20,6 @@ function getInitials(name) {
 }
 
 function AdminContactManagement() {
-  const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
   const [errorMsg, setErrorMsg] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedInquiry, setSelectedInquiry] = useState(null)
@@ -59,10 +57,6 @@ function AdminContactManagement() {
 
 
   const inquiriesPagination = useAdminPagination(filteredInquiries)
-
-  if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace />
-  }
 
   const confirmDelete = async () => {
     if (!inquiryToDelete) return

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import { fetchAdminScheme } from '../../services/adminDataApi'
 import './admin.css'
@@ -7,7 +7,6 @@ import './admin.css'
 function AdminGovernmentSchemeView() {
   const { schemeId } = useParams()
   const navigate = useNavigate()
-  const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
 
   const [scheme, setScheme] = useState(null)
   const [error, setError] = useState('')
@@ -25,10 +24,6 @@ function AdminGovernmentSchemeView() {
       cancelled = true
     }
   }, [schemeId])
-
-  if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace />
-  }
 
   if (!scheme) {
     return (

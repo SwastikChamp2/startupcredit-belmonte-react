@@ -1,7 +1,7 @@
 // src/pages/Test.jsx
 import { useEffect, useState } from 'react'
 import { collection, getDocs, writeBatch } from 'firebase/firestore'
-import { db } from '../firebase' // swap to `adminDb` if this page runs under the admin auth session
+import { db } from '../firebase'
 
 const FIELD_TYPES = ['string', 'number', 'boolean', 'array', 'object']
 const BATCH_LIMIT = 500

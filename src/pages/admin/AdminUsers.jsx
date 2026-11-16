@@ -1,14 +1,15 @@
 import { useMemo, useState } from 'react'
-import { Navigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import AdminPagination from './AdminPagination'
 import useAdminPagination from './useAdminPagination'
 import {
   adaptUserForAdmin,
   setAdminUserDisabled,
+  setAdminUserRole,
   deleteAdminUser,
 } from '../../services/adminDataApi'
 import { useFirestoreCollection } from '../../hooks/useFirestoreSnapshot'
+import { useAdminIdentity } from '../../hooks/useAdminIdentity'
 import { formatPhoneNumber } from '../../../utils/phoneUtils'
 
 function getInitials(name) {
@@ -22,7 +23,6 @@ function getInitials(name) {
 }
 
 function AdminUsers() {
-  const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
   const [errorMsg, setErrorMsg] = useState('')
   const [actionPending, setActionPending] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
@@ -30,9 +30,12 @@ function AdminUsers() {
   const [verificationFilter, setVerificationFilter] = useState('All')
   const [userToDelete, setUserToDelete] = useState(null)
   const [sortOrder, setSortOrder] = useState('desc')
+  const { user: adminUser, userRole: adminRole, loading: identityLoading } = useAdminIdentity()
 
+  const canLoadUsers =
+    Boolean(adminUser) && ['Admin', 'Super Admin'].includes(adminRole)
   const { items: users, loading, error: liveError } = useFirestoreCollection(
-    'users',
+    identityLoading || !canLoadUsers ? null : 'users',
     adaptUserForAdmin
   )
 
@@ -98,10 +101,6 @@ function AdminUsers() {
   const activeUsers = users.filter((user) => user.status === 'Active').length
   const disabledUsers = users.filter((user) => user.status === 'Disabled').length
 
-  if (!isAuthenticated) {
-    return <Navigate to="/admin/login" replace />
-  }
-
   const toggleDisabled = async (user) => {
     setActionPending(user.id)
     setErrorMsg('')
@@ -110,6 +109,18 @@ function AdminUsers() {
       // Live snapshot listener picks up the change.
     } catch (err) {
       setErrorMsg(err?.message || 'Could not update user.')
+    } finally {
+      setActionPending(null)
+    }
+  }
+
+  const changeUserRole = async (user, userRole) => {
+    setActionPending(user.id)
+    setErrorMsg('')
+    try {
+      await setAdminUserRole(user.id, userRole)
+    } catch (err) {
+      setErrorMsg(err?.message || 'Could not update user role.')
     } finally {
       setActionPending(null)
     }
@@ -218,6 +229,7 @@ function AdminUsers() {
                   </button>
                 </th>
                 <th>Status</th>
+                <th>Role</th>
                 <th>Actions</th>
               </tr>
             </thead>
@@ -242,6 +254,27 @@ function AdminUsers() {
                     <span className={`admin-status ${user.status.toLowerCase()}`}>
                       {user.status}
                     </span>
+                  </td>
+                  <td>
+                    <select
+                      aria-label={`Role for ${user.name || user.email}`}
+                      className="admin-filter-select"
+                      disabled={
+                        actionPending === user.id ||
+                        (adminRole === 'Admin' && ['Admin', 'Super Admin'].includes(user.userRole))
+                      }
+                      onChange={(event) => changeUserRole(user, event.target.value)}
+                      value={user.userRole}
+                    >
+                      {user.userRole === 'Super Admin' && (
+                        <option disabled value="Super Admin">Super Admin</option>
+                      )}
+                      <option value="User">User</option>
+                      <option value="Associate">Associate</option>
+                      {(adminRole === 'Super Admin' || user.userRole === 'Admin') && (
+                        <option value="Admin">Admin</option>
+                      )}
+                    </select>
                   </td>
                   <td>
                     <div className="admin-user-actions">

@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { Navigate } from 'react-router-dom'
 import AdminShell from './AdminShell'
 import AdminPagination from './AdminPagination'
 import useAdminPagination from './useAdminPagination'
@@ -11,7 +10,6 @@ import { useFirestoreCollection } from '../../hooks/useFirestoreSnapshot'
 import './admin.css'
 
 function AdminTruckInquiries() {
-  const isAuthenticated = localStorage.getItem('startupCreditAdminAuth') === 'true'
   const [errorMsg, setErrorMsg] = useState('')
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedInquiry, setSelectedInquiry] = useState(null)
@@ -40,8 +38,6 @@ function AdminTruckInquiries() {
   }, [inquiries, searchTerm, sortOrder])
 
   const pagination = useAdminPagination(filteredInquiries)
-
-  if (!isAuthenticated) return <Navigate to="/admin/login" replace />
 
   const confirmDelete = async () => {
     if (!inquiryToDelete) return
